@@ -28,23 +28,23 @@ class CRMNotifier:
             company = lead.get("company", "N/A")
             location = lead.get("location", "N/A")
             date_posted = lead.get("date", "N/A")
-            source = lead.get("source", "Aggregated Pipeline")
+            workplace_type = lead.get("workplace_type", "On-site 🏢")
 
             payload = {
                 "embeds": [
                     {
                         "title": f"💼 {title}",
                         "url": url,
-                        "color": 15258703,  # Emerald Green (#E8D52F / #00D166)
-                        "description": f"⚡ **New High-Intent Finance Role Detected**\nDirect application pipeline match via **{source}**.",
+                        "color": 3447003,  # Crisp Navy Blue
                         "fields": [
-                            {"name": "🏢 Company", "value": f"`{company}`", "inline": True},
-                            {"name": "📍 Location", "value": f"`{location}`", "inline": True},
-                            {"name": "📅 Posted Date", "value": f"`{date_posted}`", "inline": True},
+                            {"name": "🏢 Company", "value": company, "inline": True},
+                            {"name": "📍 Location", "value": location, "inline": True},
+                            {"name": "💼 Workplace", "value": workplace_type, "inline": True},
+                            {"name": "📅 Posted", "value": date_posted, "inline": True},
+                            {"name": "🔗 Application", "value": f"[Apply Now →]({url})", "inline": True},
                         ],
                         "footer": {
-                            "text": "Insider Career Intelligence Engine • Early-Career Finance",
-                            "icon_url": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                            "text": "Insider Career Intelligence Engine"
                         }
                     }
                 ]
@@ -75,7 +75,7 @@ class CRMNotifier:
                 lead.get("source", "API Ingestion"),   # Col E: Source/Platform
                 link_formula,                          # Col F: Application Link
                 "New Lead",                            # Col G: Application Status
-                "Ingested via Cloud Pipeline"          # Col H: Clean Notes
+                lead.get("workplace_type", "Ingested") # Col H: Workplace Type / Notes
             ]
             formatted_rows.append(row)
 
