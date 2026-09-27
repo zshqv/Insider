@@ -23,18 +23,29 @@ class CRMNotifier:
             return
 
         for lead in leads:
+            title = lead.get("title", "Job Lead")
+            url = lead.get("url", "")
+            company = lead.get("company", "N/A")
+            location = lead.get("location", "N/A")
+            date_posted = lead.get("date", "N/A")
+            source = lead.get("source", "Aggregated Pipeline")
+
             payload = {
                 "embeds": [
                     {
-                        "title": lead.get("title", "Job Lead"),
-                        "url": lead.get("url", ""),
-                        "color": 3447003,
+                        "title": f"💼 {title}",
+                        "url": url,
+                        "color": 15258703,  # Emerald Green (#E8D52F / #00D166)
+                        "description": f"⚡ **New High-Intent Finance Role Detected**\nDirect application pipeline match via **{source}**.",
                         "fields": [
-                            {"name": "Company", "value": lead.get("company", "N/A"), "inline": True},
-                            {"name": "Location", "value": lead.get("location", "N/A"), "inline": True},
-                            {"name": "Date Posted", "value": lead.get("date", "N/A"), "inline": True},
+                            {"name": "🏢 Company", "value": f"`{company}`", "inline": True},
+                            {"name": "📍 Location", "value": f"`{location}`", "inline": True},
+                            {"name": "📅 Posted Date", "value": f"`{date_posted}`", "inline": True},
                         ],
-                        "footer": {"text": "Insider Career Intelligence Engine"},
+                        "footer": {
+                            "text": "Insider Career Intelligence Engine • Early-Career Finance",
+                            "icon_url": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                        }
                     }
                 ]
             }
@@ -61,7 +72,7 @@ class CRMNotifier:
                 lead.get("title", "N/A"),              # Col B: Job Title
                 lead.get("company", "N/A"),            # Col C: Company
                 lead.get("location", "N/A"),           # Col D: Location
-                "Arbeitnow API",                        # Col E: Source/Platform
+                lead.get("source", "API Ingestion"),   # Col E: Source/Platform
                 link_formula,                          # Col F: Application Link
                 "New Lead",                            # Col G: Application Status
                 "Ingested via Cloud Pipeline"          # Col H: Clean Notes
