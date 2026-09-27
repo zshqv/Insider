@@ -1,17 +1,29 @@
-from datetime import datetime
 import json
+from datetime import datetime
 import requests
 
 
 def load_config():
-    with open("config.json", "r") as f:
-        return json.load(f)
+    try:
+        with open("config.json", "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 
 class JobScraper:
-    def __init__(self, config):
-        self.target_titles = [t.lower() for t in config.get("target_titles", [])]
-        self.locations = [l.lower() for l in config.get("locations", [])]
+    def __init__(self, config=None):
+        if config is None:
+            config = load_config()
+        self.target_titles = [t.lower() for t in config.get("target_roles", [])]
+        self.locations = [l.lower() for l in config.get("target_locations", [])]
+
+        # Explicit negative keywords to drop generic tech/engineering listings
+        self.exclude_keywords = [
+            "full stack", "frontend", "backend", "devops", "software engineer",
+            "react", "node", "java", "salesforce", "recruiter", "marketing",
+            "customer support", "driver", "nursing", "fitness"
+        ]
 
     def _format_date(self, raw_date):
         if not raw_date:
@@ -24,7 +36,7 @@ class JobScraper:
             return str(raw_date)[:10]
 
     def run(self):
-        print("🔍 Querying job board APIs...")
+        print("🔍 Querying job board APIs for Finance & Quantitative positions...")
         url = "https://www.arbeitnow.com/api/job-board-api"
         leads = []
 
@@ -34,22 +46,29 @@ class JobScraper:
             data = response.json().get("data", [])
 
             for job in data:
-                title = job.get("title", "")
-                location = job.get("location", "")
+                title = job.get("title", "").lower()
+                location = job.get("location", "").lower()
 
-                title_match = any(t in title.lower() for t in self.target_titles) if self.target_titles else True
-                location_match = any(l in location.lower() for l in self.locations) if self.locations else True
+                # 1. Skip if title contains explicit negative keywords
+                if any(neg in title for neg in self.exclude_keywords):
+                    continue
+
+                # 2. Strict keyword match for target finance titles
+                title_match = any(target in title for target in self.target_titles) if self.target_titles else True
+
+                # 3. Location match
+                location_match = any(loc in location for loc in self.locations) if self.locations else True
 
                 if title_match and location_match:
                     leads.append({
-                        "title": title,
+                        "title": job.get("title", ""),
                         "company": job.get("company_name", "N/A"),
-                        "location": location,
+                        "location": job.get("location", "N/A"),
                         "url": job.get("url", ""),
                         "date": self._format_date(job.get("created_at"))
                     })
 
-            print(f"✅ Extracted {len(leads)} relevant job lead(s) matching configuration criteria.")
+            print(f"✅ Extracted {len(leads)} high-intent finance lead(s) matching criteria.")
             return leads
 
         except Exception as e:
