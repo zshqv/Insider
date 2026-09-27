@@ -5,7 +5,7 @@ import requests
 class CRMNotifier:
     def __init__(self):
         self.discord_webhook = os.getenv("DISCORD_WEBHOOK_URL")
-        self.sheet_id = os.getenv("GOOGLE_SHEET_ID")
+        self.sheet_webhook = os.getenv("GOOGLE_SHEET_WEBHOOK")
 
     def push_to_discord(self, leads):
         if not self.discord_webhook:
@@ -37,12 +37,10 @@ class CRMNotifier:
         print(f"🚀 Successfully sent {len(leads)} lead(s) to Discord!")
 
     def push_to_google_sheet(self, leads):
-        if not self.sheet_id:
-            print("ℹ️ Google Sheet ID not configured. Skipping Sheet append.")
+        if not self.sheet_webhook:
+            print("ℹ️ Google Sheet Webhook URL not configured. Skipping Sheet append.")
             return
 
-        # Rows match Claude's 8-column schema:
-        # [Date, Job Title, Company, Location, Source, Hyperlink, Status, Notes]
         formatted_rows = []
         for lead in leads:
             url = lead.get("url", "")
@@ -55,9 +53,14 @@ class CRMNotifier:
                 lead.get("location", "N/A"),         # Col D: Location
                 "Arbeitnow API",                      # Col E: Source/Platform
                 link_formula,                        # Col F: Application Link
-                "New Lead",                          # Col G: Application Status (Exact match for dropdown)
-                "85 - Automated ingestion via Cloud" # Col H: Match Score / Notes (Triggers regex bold rule)
+                "New Lead",                          # Col G: Application Status
+                "85 - Automated ingestion via Cloud" # Col H: Match Score / Notes
             ]
             formatted_rows.append(row)
 
-        print(f"📊 Prepared {len(formatted_rows)} structured row(s) for Google Sheet ID: {self.sheet_id}")
+        try:
+            response = requests.post(self.sheet_webhook, json={"rows": formatted_rows}, timeout=15)
+            response.raise_for_status()
+            print(f"🚀 Successfully appended {len(formatted_rows)} row(s) to Google Sheets!")
+        except Exception as e:
+            print(f"⚠️ Failed to push leads to Google Sheets: {e}")
