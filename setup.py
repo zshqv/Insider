@@ -10,7 +10,7 @@ DEFAULT_CONFIG = {
     "experience_level": ["Entry-level", "Junior", "Mid-level"],
     "discord_webhook_url": "",
     "google_sheet_id": "",
-    "check_interval_hours": 6,
+    "check_interval_hours": 0.5,  # 30 Minutes
     "max_results_per_run": 25,
 }
 
@@ -94,10 +94,13 @@ def run_setup():
     print("-" * 40)
     
     interval_input = prompt_string(
-        "Scrape check interval in hours",
+        "Scrape check interval in hours (e.g., 0.5 for 30 mins)",
         default_value=str(DEFAULT_CONFIG["check_interval_hours"])
     )
-    config["check_interval_hours"] = int(interval_input) if interval_input.isdigit() else 6
+    try:
+        config["check_interval_hours"] = float(interval_input)
+    except ValueError:
+        config["check_interval_hours"] = 0.5
 
     max_input = prompt_string(
         "Maximum leads to extract per run",
