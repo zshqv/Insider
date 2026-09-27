@@ -1,0 +1,22 @@
+{
+    "target_roles": [
+        "Software Engineer",
+        "Backend Developer",
+        "Data Analyst"
+    ],
+    "target_locations": [
+        "Remote",
+        "United States",
+        "India",
+        "Germany"
+    ],
+    "experience_level": [
+        "Entry-level",
+        "Junior",
+        "Mid-level"
+    ],
+    "discord_webhook_url": "",
+    "google_sheet_id": "",
+    "check_interval_hours": 6,
+    "max_results_per_run": 25
+}
