@@ -21,7 +21,6 @@ def run_pipeline():
 
 
 def main():
-    # Supports single execution mode for cloud triggers (e.g., GitHub Actions)
     if "--once" in sys.argv:
         run_pipeline()
         return
