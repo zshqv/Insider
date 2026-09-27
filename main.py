@@ -1,3 +1,4 @@
+import sys
 import time
 from datetime import datetime
 from scraper import JobScraper, load_config
@@ -20,6 +21,11 @@ def run_pipeline():
 
 
 def main():
+    # Supports single execution mode for cloud triggers (e.g., GitHub Actions)
+    if "--once" in sys.argv:
+        run_pipeline()
+        return
+
     config = load_config()
     interval_hours = float(config.get("check_interval_hours", 0.5))
     interval_seconds = int(interval_hours * 3600)
