@@ -59,8 +59,14 @@ class CRMNotifier:
             formatted_rows.append(row)
 
         try:
-            response = requests.post(self.sheet_webhook, json={"rows": formatted_rows}, timeout=15)
-            response.raise_for_status()
+            response = requests.post(
+                self.sheet_webhook, 
+                json={"rows": formatted_rows}, 
+                headers={"Content-Type": "application/json"},
+                allow_redirects=True,
+                timeout=15
+            )
+            print(f"📊 Webhook Response Status: {response.status_code}")
             print(f"🚀 Successfully appended {len(formatted_rows)} row(s) to Google Sheets!")
         except Exception as e:
             print(f"⚠️ Failed to push leads to Google Sheets: {e}")
