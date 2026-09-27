@@ -17,6 +17,6 @@
     ],
     "discord_webhook_url": "",
     "google_sheet_id": "",
-    "check_interval_hours": 6,
+    "check_interval_hours": 0.5,
     "max_results_per_run": 25
 }
