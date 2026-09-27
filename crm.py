@@ -14,7 +14,6 @@ def load_config():
 class CRMNotifier:
     def __init__(self):
         config = load_config()
-        # Checks env vars first (GitHub Actions), falls back to config.json (Local PowerShell)
         self.discord_webhook = os.getenv("DISCORD_WEBHOOK_URL") or config.get("discord_webhook_url")
         self.sheet_webhook = os.getenv("GOOGLE_SHEET_WEBHOOK") or config.get("google_sheet_webhook")
 
@@ -29,7 +28,7 @@ class CRMNotifier:
                     {
                         "title": lead.get("title", "Job Lead"),
                         "url": lead.get("url", ""),
-                        "color": 3447003,  # Crisp Navy Blue
+                        "color": 3447003,
                         "fields": [
                             {"name": "Company", "value": lead.get("company", "N/A"), "inline": True},
                             {"name": "Location", "value": lead.get("location", "N/A"), "inline": True},
@@ -58,14 +57,14 @@ class CRMNotifier:
             link_formula = f'=HYPERLINK("{url}", "Apply →")' if url else "N/A"
             
             row = [
-                lead.get("date", "N/A"),             # Col A: Date Added
-                lead.get("title", "N/A"),            # Col B: Job Title
-                lead.get("company", "N/A"),          # Col C: Company
-                lead.get("location", "N/A"),         # Col D: Location
-                "Arbeitnow API",                      # Col E: Source/Platform
-                link_formula,                        # Col F: Application Link
-                "New Lead",                          # Col G: Application Status
-                "85 - Automated ingestion via Cloud" # Col H: Match Score / Notes
+                lead.get("date", "N/A"),               # Col A: Date Added
+                lead.get("title", "N/A"),              # Col B: Job Title
+                lead.get("company", "N/A"),            # Col C: Company
+                lead.get("location", "N/A"),           # Col D: Location
+                "Arbeitnow API",                        # Col E: Source/Platform
+                link_formula,                          # Col F: Application Link
+                "New Lead",                            # Col G: Application Status
+                "Ingested via Cloud Pipeline"          # Col H: Clean Notes
             ]
             formatted_rows.append(row)
 
