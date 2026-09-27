@@ -46,50 +46,102 @@ class JobScraper:
         except (ValueError, TypeError):
             return str(raw_date)[:10]
 
-    def run(self):
-        print("🔍 Querying job board APIs for Corporate Finance & Analytics positions...")
+    def _is_valid_lead(self, title, location):
+        title_lower = title.lower()
+        location_lower = location.lower()
+
+        if any(sen in title_lower for sen in self.seniority_exclusions):
+            return False
+        if any(tech in title_lower for tech in self.tech_exclusions):
+            return False
+        if any(mkt in title_lower for mkt in self.market_exclusions):
+            return False
+
+        title_match = any(target in title_lower for target in self.target_titles) if self.target_titles else True
+        location_match = any(loc in location_lower for loc in self.locations) if self.locations else True
+
+        return title_match and location_match
+
+    def fetch_arbeitnow(self):
         url = "https://www.arbeitnow.com/api/job-board-api"
         leads = []
-
         try:
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            data = response.json().get("data", [])
-
-            for job in data:
-                title = job.get("title", "").lower()
-                location = job.get("location", "").lower()
-
-                # 1. Skip senior/lead roles
-                if any(sen in title for sen in self.seniority_exclusions):
-                    continue
-
-                # 2. Skip non-finance tech roles
-                if any(tech in title for tech in self.tech_exclusions):
-                    continue
-
-                # 3. Skip markets & trading roles
-                if any(mkt in title for mkt in self.market_exclusions):
-                    continue
-
-                # 4. Match finance keywords
-                title_match = any(target in title for target in self.target_titles) if self.target_titles else True
-
-                # 5. Match target locations
-                location_match = any(loc in location for loc in self.locations) if self.locations else True
-
-                if title_match and location_match:
+            res = requests.get(url, timeout=10)
+            res.raise_for_status()
+            for job in res.json().get("data", []):
+                title = job.get("title", "")
+                loc = job.get("location", "")
+                if self._is_valid_lead(title, loc):
                     leads.append({
-                        "title": job.get("title", ""),
+                        "title": title,
                         "company": job.get("company_name", "N/A"),
-                        "location": job.get("location", "N/A"),
+                        "location": loc,
                         "url": job.get("url", ""),
-                        "date": self._format_date(job.get("created_at"))
+                        "date": self._format_date(job.get("created_at")),
+                        "source": "Arbeitnow API"
                     })
-
-            print(f"✅ Extracted {len(leads)} relevant corporate finance & analytics lead(s).")
-            return leads
-
         except Exception as e:
-            print(f"❌ Error fetching job listings: {e}")
-            return []
+            print(f"⚠️ Arbeitnow API fetch failed: {e}")
+        return leads
+
+    def fetch_remotive(self):
+        url = "https://remotive.com/api/remote-jobs?category=finance-legal"
+        leads = []
+        try:
+            res = requests.get(url, timeout=10)
+            res.raise_for_status()
+            for job in res.json().get("jobs", []):
+                title = job.get("title", "")
+                loc = job.get("candidate_required_location", "Remote")
+                if self._is_valid_lead(title, loc):
+                    leads.append({
+                        "title": title,
+                        "company": job.get("company_name", "N/A"),
+                        "location": loc or "Remote",
+                        "url": job.get("url", ""),
+                        "date": self._format_date(job.get("publication_date")),
+                        "source": "Remotive API"
+                    })
+        except Exception as e:
+            print(f"⚠️ Remotive API fetch failed: {e}")
+        return leads
+
+    def fetch_jobicy(self):
+        url = "https://jobicy.com/api/v2/remote-jobs?industry=finance"
+        leads = []
+        try:
+            res = requests.get(url, timeout=10)
+            res.raise_for_status()
+            for job in res.json().get("jobs", []):
+                title = job.get("jobTitle", "")
+                loc = job.get("jobGeo", "Remote")
+                if self._is_valid_lead(title, loc):
+                    leads.append({
+                        "title": title,
+                        "company": job.get("companyName", "N/A"),
+                        "location": loc or "Remote",
+                        "url": job.get("url", ""),
+                        "date": self._format_date(job.get("pubDate")),
+                        "source": "Jobicy API"
+                    })
+        except Exception as e:
+            print(f"⚠️ Jobicy API fetch failed: {e}")
+        return leads
+
+    def run(self):
+        print("🔍 Querying multi-source pipeline (Arbeitnow, Remotive, Jobicy)...")
+        all_leads = []
+        all_leads.extend(self.fetch_arbeitnow())
+        all_leads.extend(self.fetch_remotive())
+        all_leads.extend(self.fetch_jobicy())
+
+        # Deduplicate leads based on URL/Title
+        unique_leads = {}
+        for lead in all_leads:
+            unique_key = f"{lead['title'].lower()}-{lead['company'].lower()}"
+            if unique_key not in unique_leads:
+                unique_leads[unique_key] = lead
+
+        final_leads = list(unique_leads.values())
+        print(f"✅ Extracted {len(final_leads)} deduplicated early-career finance lead(s).")
+        return final_leads
