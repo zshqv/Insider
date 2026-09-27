@@ -1,28 +1,34 @@
 {
     "target_roles": [
-      "Financial Analyst",
-      "Quantitative Analyst",
-      "Investment Banking",
-      "Corporate Finance",
-      "M&A",
-      "Equity Research",
-      "Business Analyst",
-      "Data Analyst",
-      "Risk Analyst"
+      "financial analyst",
+      "quantitative analyst",
+      "quant",
+      "investment banking",
+      "corporate finance",
+      "m&a",
+      "equity research",
+      "risk analyst",
+      "finance analyst",
+      "business analyst",
+      "data analyst"
     ],
     "target_locations": [
-      "Remote",
-      "Germany",
-      "Switzerland",
-      "United Kingdom",
-      "India",
-      "United States"
+      "remote",
+      "germany",
+      "switzerland",
+      "united kingdom",
+      "india",
+      "united states",
+      "zurich",
+      "frankfurt",
+      "london",
+      "mumbai"
     ],
     "experience_level": [
-      "Entry-level",
-      "Junior",
-      "Mid-level",
-      "Internship"
+      "entry-level",
+      "junior",
+      "mid-level",
+      "internship"
     ],
     "discord_webhook_url": "https://discord.com/api/webhooks/1553666477444440084/gjqtAZin6dGsK8PlMovO_Isdud2zWMHmL3OCab9q-cUtDLNhlfMJ65ufShtK_Ilc-U3a",
     "google_sheet_webhook": "https://script.google.com/macros/s/AKfycbwf8TcTPB3olADD7XGRtZ-L007nxzGA0QQOQD6fWwk6yudjoqt7P6s7KXHeUlHr0QIg/exec",
