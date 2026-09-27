@@ -40,7 +40,7 @@ class JobScraper:
         # Check title or tag matches
         role_match = any(role in title or any(role in tag for tag in tags) for role in self.roles) if self.roles else True
         
-        # Check location matches (if specified, otherwise default to True)
+        # Check location matches
         location_match = any(loc in location for loc in self.locations) if self.locations else True
 
         return role_match and location_match
@@ -77,7 +77,6 @@ if __name__ == "__main__":
     scraper = JobScraper(config)
     leads = scraper.run()
     
-    # Print sample output
     if leads:
         print("\n--- SAMPLE EXTRACTED LEADS ---")
         for idx, lead in enumerate(leads[:3], 1):
