@@ -1,22 +1,31 @@
 {
     "target_roles": [
-        "Software Engineer",
-        "Backend Developer",
-        "Data Analyst"
+      "Financial Analyst",
+      "Quantitative Analyst",
+      "Investment Banking",
+      "Corporate Finance",
+      "M&A",
+      "Equity Research",
+      "Business Analyst",
+      "Data Analyst",
+      "Risk Analyst"
     ],
     "target_locations": [
-        "Remote",
-        "United States",
-        "India",
-        "Germany"
+      "Remote",
+      "Germany",
+      "Switzerland",
+      "United Kingdom",
+      "India",
+      "United States"
     ],
     "experience_level": [
-        "Entry-level",
-        "Junior",
-        "Mid-level"
+      "Entry-level",
+      "Junior",
+      "Mid-level",
+      "Internship"
     ],
-    "discord_webhook_url": "",
-    "google_sheet_id": "",
+    "discord_webhook_url": "https://discord.com/api/webhooks/1553666477444440084/gjqtAZin6dGsK8PlMovO_Isdud2zWMHmL3OCab9q-cUtDLNhlfMJ65ufShtK_Ilc-U3a",
+    "google_sheet_webhook": "https://script.google.com/macros/s/AKfycbwf8TcTPB3olADD7XGRtZ-L007nxzGA0QQOQD6fWwk6yudjoqt7P6s7KXHeUlHr0QIg/exec",
     "check_interval_hours": 0.5,
     "max_results_per_run": 25
-}
+  }
