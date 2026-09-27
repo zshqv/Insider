@@ -46,6 +46,14 @@ class JobScraper:
         except (ValueError, TypeError):
             return str(raw_date)[:10]
 
+    def _determine_workplace_type(self, title, location, job_data=None):
+        combined = f"{title} {location}".lower()
+        if "hybrid" in combined:
+            return "Hybrid 🏢🏠"
+        elif "remote" in combined or (job_data and job_data.get("remote")):
+            return "Remote 🌐"
+        return "On-site 🏢"
+
     def _is_valid_lead(self, title, location):
         title_lower = title.lower()
         location_lower = location.lower()
@@ -76,9 +84,10 @@ class JobScraper:
                         "title": title,
                         "company": job.get("company_name", "N/A"),
                         "location": loc,
+                        "workplace_type": self._determine_workplace_type(title, loc, job),
                         "url": job.get("url", ""),
                         "date": self._format_date(job.get("created_at")),
-                        "source": "Arbeitnow API"
+                        "source": "Arbeitnow"
                     })
         except Exception as e:
             print(f"⚠️ Arbeitnow API fetch failed: {e}")
@@ -98,9 +107,10 @@ class JobScraper:
                         "title": title,
                         "company": job.get("company_name", "N/A"),
                         "location": loc or "Remote",
+                        "workplace_type": "Remote 🌐",
                         "url": job.get("url", ""),
                         "date": self._format_date(job.get("publication_date")),
-                        "source": "Remotive API"
+                        "source": "Remotive"
                     })
         except Exception as e:
             print(f"⚠️ Remotive API fetch failed: {e}")
@@ -120,9 +130,10 @@ class JobScraper:
                         "title": title,
                         "company": job.get("companyName", "N/A"),
                         "location": loc or "Remote",
+                        "workplace_type": self._determine_workplace_type(title, loc),
                         "url": job.get("url", ""),
                         "date": self._format_date(job.get("pubDate")),
-                        "source": "Jobicy API"
+                        "source": "Jobicy"
                     })
         except Exception as e:
             print(f"⚠️ Jobicy API fetch failed: {e}")
@@ -135,7 +146,6 @@ class JobScraper:
         all_leads.extend(self.fetch_remotive())
         all_leads.extend(self.fetch_jobicy())
 
-        # Deduplicate leads based on URL/Title
         unique_leads = {}
         for lead in all_leads:
             unique_key = f"{lead['title'].lower()}-{lead['company'].lower()}"
@@ -143,5 +153,5 @@ class JobScraper:
                 unique_leads[unique_key] = lead
 
         final_leads = list(unique_leads.values())
-        print(f"✅ Extracted {len(final_leads)} deduplicated early-career finance lead(s).")
+        print(f"✅ Extracted {len(final_leads)} deduplicated finance lead(s).")
         return final_leads
