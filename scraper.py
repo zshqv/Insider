@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import requests
 
@@ -11,6 +12,16 @@ class JobScraper:
     def __init__(self, config):
         self.target_titles = [t.lower() for t in config.get("target_titles", [])]
         self.locations = [l.lower() for l in config.get("locations", [])]
+
+    def _format_date(self, raw_date):
+        if not raw_date:
+            return datetime.now().strftime("%Y-%m-%d")
+        if isinstance(raw_date, (int, float)):
+            return datetime.fromtimestamp(raw_date).strftime("%Y-%m-%d")
+        try:
+            return datetime.fromtimestamp(int(raw_date)).strftime("%Y-%m-%d")
+        except (ValueError, TypeError):
+            return str(raw_date)[:10]
 
     def run(self):
         print("🔍 Querying job board APIs...")
@@ -35,7 +46,7 @@ class JobScraper:
                         "company": job.get("company_name", "N/A"),
                         "location": location,
                         "url": job.get("url", ""),
-                        "date": job.get("created_at", "N/A")
+                        "date": self._format_date(job.get("created_at"))
                     })
 
             print(f"✅ Extracted {len(leads)} relevant job lead(s) matching configuration criteria.")
