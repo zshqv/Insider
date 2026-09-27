@@ -40,5 +40,24 @@ class CRMNotifier:
         if not self.sheet_id:
             print("ℹ️ Google Sheet ID not configured. Skipping Sheet append.")
             return
-        
-        print(f"📊 Ready to append {len(leads)} lead(s) to Google Sheet ID: {self.sheet_id}")
+
+        # Rows match Claude's 8-column schema:
+        # [Date, Job Title, Company, Location, Source, Hyperlink, Status, Notes]
+        formatted_rows = []
+        for lead in leads:
+            url = lead.get("url", "")
+            link_formula = f'=HYPERLINK("{url}", "Apply →")' if url else "N/A"
+            
+            row = [
+                lead.get("date", "N/A"),             # Col A: Date Added
+                lead.get("title", "N/A"),            # Col B: Job Title
+                lead.get("company", "N/A"),          # Col C: Company
+                lead.get("location", "N/A"),         # Col D: Location
+                "Arbeitnow API",                      # Col E: Source/Platform
+                link_formula,                        # Col F: Application Link
+                "New Lead",                          # Col G: Application Status (Exact match for dropdown)
+                "85 - Automated ingestion via Cloud" # Col H: Match Score / Notes (Triggers regex bold rule)
+            ]
+            formatted_rows.append(row)
+
+        print(f"📊 Prepared {len(formatted_rows)} structured row(s) for Google Sheet ID: {self.sheet_id}")
