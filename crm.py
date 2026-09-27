@@ -1,11 +1,22 @@
+import json
 import os
 import requests
 
 
+def load_config():
+    try:
+        with open("config.json", "r") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
 class CRMNotifier:
     def __init__(self):
-        self.discord_webhook = os.getenv("DISCORD_WEBHOOK_URL")
-        self.sheet_webhook = os.getenv("GOOGLE_SHEET_WEBHOOK")
+        config = load_config()
+        # Checks env vars first (GitHub Actions), falls back to config.json (Local PowerShell)
+        self.discord_webhook = os.getenv("DISCORD_WEBHOOK_URL") or config.get("discord_webhook_url")
+        self.sheet_webhook = os.getenv("GOOGLE_SHEET_WEBHOOK") or config.get("google_sheet_webhook")
 
     def push_to_discord(self, leads):
         if not self.discord_webhook:
@@ -58,15 +69,17 @@ class CRMNotifier:
             ]
             formatted_rows.append(row)
 
+        payload = json.dumps({"rows": formatted_rows})
+
         try:
             response = requests.post(
                 self.sheet_webhook, 
-                json={"rows": formatted_rows}, 
-                headers={"Content-Type": "application/json"},
-                allow_redirects=True,
+                data=payload,
+                headers={"Content-Type": "text/plain"},
                 timeout=15
             )
             print(f"📊 Webhook Response Status: {response.status_code}")
+            print(f"📄 Response Text: {response.text}")
             print(f"🚀 Successfully appended {len(formatted_rows)} row(s) to Google Sheets!")
         except Exception as e:
             print(f"⚠️ Failed to push leads to Google Sheets: {e}")
