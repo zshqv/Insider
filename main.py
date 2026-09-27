@@ -21,18 +21,19 @@ def run_pipeline():
 
 def main():
     config = load_config()
-    interval_hours = config.get("check_interval_hours", 6)
-    interval_seconds = interval_hours * 3600
+    interval_hours = float(config.get("check_interval_hours", 0.5))
+    interval_seconds = int(interval_hours * 3600)
+    interval_minutes = int(interval_hours * 60)
     
     print("=" * 60)
     print("        INSIDER: Inbound Career Intelligence Engine        ")
-    print(f"        Interval: Every {interval_hours} Hour(s)                       ")
+    print(f"        Interval: Every {interval_minutes} Minute(s)                     ")
     print("=" * 60)
     
     try:
         while True:
             run_pipeline()
-            print(f"\n⏳ Pipeline sleeping for {interval_hours} hour(s). Press Ctrl+C to terminate.")
+            print(f"\n⏳ Pipeline sleeping for {interval_minutes} minute(s). Press Ctrl+C to terminate.")
             time.sleep(interval_seconds)
     except KeyboardInterrupt:
         print("\n\n🛑 Insider engine terminated cleanly by user.")
@@ -40,4 +41,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
