@@ -15,7 +15,7 @@ class JobScraperEngine:
     def is_target_role(self, title, description=""):
         text = f"{title} {description}".lower()
         
-        # 1. Strict Seniority Exclusions
+        # 1. Seniority Exclusions
         senior_patterns = [
             r"\bmanager\b", r"\bhead\b", r"\bdirector\b", r"\blead\b", 
             r"\bprincipal\b", r"\bvp\b", r"\bvice president\b", r"\bchief\b", 
@@ -25,18 +25,38 @@ class JobScraperEngine:
             if re.search(pattern, title.lower()):
                 return False
 
-        # 2. Year of Experience (YOE) Filtering (Reject 3+ YOE requirements)
+        # 2. Year of Experience (YOE) Filtering (Reject 3+ YOE)
         high_yoe_pattern = r"\b([3-9]|\d{2,})\+?\s*(years?|yrs?|yoe)\b"
         if re.search(high_yoe_pattern, text):
             return False
 
-        # 3. Explicit Match for Entry Level & Target Roles
+        # 3. Target Roles Match
         return any(role in title.lower() for role in self.roles)
+
+    def extract_resume_keywords(self, title, description=""):
+        text = f"{title} {description}".lower()
+        
+        keyword_map = {
+            "Financial Modeling": [r"financial model", r"dcf", r"lbo", r"valuation"],
+            "M&A": [r"m&a", r"mergers", r"acquisitions", r"due diligence"],
+            "Equity Research": [r"equity research", r"coverage analyst", r"financial statement"],
+            "Excel / Financial Analysis": [r"excel", r"financial analysis", r"fpa", r"fp&a", r"forecasting"],
+            "Python / Data Science": [r"python", r"pandas", r"numpy"],
+            "SQL & Databases": [r"sql", r"database", r"postgresql", r"mysql"],
+            "Power BI / Tableau": [r"power bi", r"tableau", r"dashboard", r"visualization"],
+            "Risk & Analytics": [r"risk analyst", r"fraud", r"credit risk", r"quantitative"]
+        }
+        
+        found_keywords = []
+        for label, patterns in keyword_map.items():
+            if any(re.search(p, text) for p in patterns):
+                found_keywords.append(f"`{label}`")
+                
+        return found_keywords if found_keywords else ["`General Finance`"]
 
     def is_priority_location(self, location_str):
         loc_lower = location_str.lower()
         
-        # Exclude region-locked non-India locations even if "remote" is present
         excluded_regions = ["uk", "united kingdom", "us", "usa", "canada", "emea", "apac", "latam", "europe", "germany"]
         for region in excluded_regions:
             if re.search(r'\b' + region + r'\b', loc_lower):
@@ -77,8 +97,10 @@ class JobScraperEngine:
                                 "location": location,
                                 "url": item.get("url"),
                                 "source": "Arbeitnow",
+                                "source_type": "Aggregator 📦",
                                 "workplace_type": "Remote 🌐" if item.get("remote") else "On-site 🏢",
                                 "is_priority": is_prio,
+                                "keywords": self.extract_resume_keywords(title, description),
                                 "date": datetime.now().strftime("%Y-%m-%d")
                             })
         except Exception as e:
@@ -103,8 +125,10 @@ class JobScraperEngine:
                             "location": location,
                             "url": item.get("url"),
                             "source": "Remotive",
+                            "source_type": "Aggregator 📦",
                             "workplace_type": "Remote 🌐",
                             "is_priority": is_prio,
+                            "keywords": self.extract_resume_keywords(title, description),
                             "date": datetime.now().strftime("%Y-%m-%d")
                         })
         except Exception as e:
@@ -134,8 +158,10 @@ class JobScraperEngine:
                                     "location": location,
                                     "url": item.get("absolute_url"),
                                     "source": f"Greenhouse ({token.capitalize()})",
+                                    "source_type": "Direct Career Portal 🎯",
                                     "workplace_type": self.detect_workplace_type(title, location),
                                     "is_priority": is_prio,
+                                    "keywords": self.extract_resume_keywords(title, content),
                                     "date": datetime.now().strftime("%Y-%m-%d")
                                 })
             except Exception as e:
