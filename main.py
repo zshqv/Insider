@@ -24,7 +24,7 @@ def send_to_discord(job, webhook_url):
     priority_prefix = "⚡ [HIGH PRIORITY] " if job.get("is_priority") else "🌐 "
     embed = {
         "title": f"{priority_prefix}{job['title']}",
-        "color": 5814783 if job.get("is_priority") else 3447003,  # Gold/Purple for High Priority, Blue for Global
+        "color": 5814783 if job.get("is_priority") else 3447003,
         "fields": [
             {"name": "Company", "value": job.get("company", "N/A"), "inline": True},
             {"name": "Location", "value": job.get("location", "N/A"), "inline": True},
@@ -46,6 +46,12 @@ def send_to_google_sheet(job, webhook_url):
         print("[!] Google Sheet webhook URL not configured.")
         return
 
+    workplace_and_prio = job.get("workplace_type", "On-site 🏢")
+    if job.get("is_priority"):
+        workplace_and_prio += " | ⚡ HIGH PRIORITY"
+    else:
+        workplace_and_prio += " | 🌐 GLOBAL TIER"
+
     payload = {
         "date": job.get("date"),
         "title": job.get("title"),
@@ -53,13 +59,19 @@ def send_to_google_sheet(job, webhook_url):
         "location": job.get("location"),
         "source": job.get("source"),
         "url": job.get("url"),
-        "workplace_type": job.get("workplace_type"),
-        "is_priority": job.get("is_priority")
+        "status": "New Lead",
+        "notes": workplace_and_prio
     }
 
     try:
-        res = requests.post(webhook_url, json=payload, timeout=10)
+        res = requests.post(
+            webhook_url, 
+            json=payload, 
+            headers={"Content-Type": "application/json"},
+            timeout=10
+        )
         res.raise_for_status()
+        print(f"[✔] Pushed to Sheet: {job.get('title')}")
     except Exception as e:
         print(f"[!] Failed to send job to Google Sheet: {e}")
 
