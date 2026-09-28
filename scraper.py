@@ -10,12 +10,11 @@ class JobScraperEngine:
         
         self.roles = [r.lower() for r in self.config.get("target_roles", [])]
         self.priority_locs = [l.lower() for l in self.config.get("priority_locations", ["india", "mumbai", "remote"])]
-        self.secondary_locs = [l.lower() for l in self.config.get("secondary_locations", [])]
 
     def is_target_role(self, title):
         title_lower = title.lower()
         
-        # Strict exclusion rules for senior/executive roles
+        # Strict exclusion regex for non-entry-level titles
         excluded_patterns = [
             r"\bmanager\b", r"\bhead\b", r"\bdirector\b", r"\blead\b", 
             r"\bprincipal\b", r"\bvp\b", r"\bvice president\b", r"\bchief\b", 
