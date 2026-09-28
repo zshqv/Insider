@@ -1,48 +1,85 @@
-import sys
-import time
-from datetime import datetime
-from scraper import JobScraper, load_config
-from crm import CRMNotifier
+import os
+import json
+import argparse
+import requests
+from scraper import JobScraperEngine
 
-
-def run_pipeline():
-    print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 🚀 Launching Insider Sourcing Pipeline...")
+def load_config(config_path="config.json"):
+    with open(config_path, "r") as f:
+        config = json.load(f)
     
-    config = load_config()
-    scraper = JobScraper(config)
-    leads = scraper.run()
-    
-    if leads:
-        crm = CRMNotifier()
-        crm.push_to_discord(leads)
-        crm.push_to_google_sheet(leads)
-    else:
-        print("ℹ️ Pipeline finished: No new leads found matching your criteria.")
+    # Priority: Environment Variables (GitHub Secrets) > config.json
+    discord_url = os.environ.get("DISCORD_WEBHOOK_URL") or config.get("discord_webhook_url")
+    sheet_url = os.environ.get("GOOGLE_SHEET_WEBHOOK") or config.get("google_sheet_webhook")
 
+    config["discord_webhook_url"] = discord_url
+    config["google_sheet_webhook"] = sheet_url
+    return config
 
-def main():
-    if "--once" in sys.argv:
-        run_pipeline()
+def send_to_discord(job, webhook_url):
+    if not webhook_url or "YOUR_DISCORD_WEBHOOK_URL" in webhook_url:
+        print("[!] Discord webhook URL not configured.")
         return
 
-    config = load_config()
-    interval_hours = float(config.get("check_interval_hours", 0.5))
-    interval_seconds = int(interval_hours * 3600)
-    interval_minutes = int(interval_hours * 60)
-    
-    print("=" * 60)
-    print("        INSIDER: Inbound Career Intelligence Engine        ")
-    print(f"        Interval: Every {interval_minutes} Minute(s)                     ")
-    print("=" * 60)
-    
-    try:
-        while True:
-            run_pipeline()
-            print(f"\n⏳ Pipeline sleeping for {interval_minutes} minute(s). Press Ctrl+C to terminate.")
-            time.sleep(interval_seconds)
-    except KeyboardInterrupt:
-        print("\n\n🛑 Insider engine terminated cleanly by user.")
+    priority_prefix = "⚡ [HIGH PRIORITY] " if job.get("is_priority") else "🌐 "
+    embed = {
+        "title": f"{priority_prefix}{job['title']}",
+        "color": 5814783 if job.get("is_priority") else 3447003,  # Gold/Purple for High Priority, Blue for Global
+        "fields": [
+            {"name": "Company", "value": job.get("company", "N/A"), "inline": True},
+            {"name": "Location", "value": job.get("location", "N/A"), "inline": True},
+            {"name": "Workplace", "value": job.get("workplace_type", "N/A"), "inline": True},
+            {"name": "Source", "value": job.get("source", "N/A"), "inline": True},
+            {"name": "Apply Link", "value": f"[Apply Here]({job.get('url')})", "inline": False}
+        ],
+        "footer": {"text": f"Ingestion Pipeline | {job.get('date')}"}
+    }
 
+    try:
+        res = requests.post(webhook_url, json={"embeds": [embed]}, timeout=10)
+        res.raise_for_status()
+    except Exception as e:
+        print(f"[!] Failed to send job to Discord: {e}")
+
+def send_to_google_sheet(job, webhook_url):
+    if not webhook_url or "YOUR_GOOGLE_SHEET_WEBHOOK" in webhook_url:
+        print("[!] Google Sheet webhook URL not configured.")
+        return
+
+    payload = {
+        "date": job.get("date"),
+        "title": job.get("title"),
+        "company": job.get("company"),
+        "location": job.get("location"),
+        "source": job.get("source"),
+        "url": job.get("url"),
+        "workplace_type": job.get("workplace_type"),
+        "is_priority": job.get("is_priority")
+    }
+
+    try:
+        res = requests.post(webhook_url, json=payload, timeout=10)
+        res.raise_for_status()
+    except Exception as e:
+        print(f"[!] Failed to send job to Google Sheet: {e}")
+
+def run_pipeline(once=False):
+    config = load_config()
+    engine = JobScraperEngine(config_path="config.json")
+    
+    print("[*] Running job ingestion pipeline...")
+    jobs = engine.run_all()
+    print(f"[*] Found {len(jobs)} total matching positions.")
+
+    for job in jobs[:config.get("max_results_per_run", 30)]:
+        send_to_discord(job, config["discord_webhook_url"])
+        send_to_google_sheet(job, config["google_sheet_webhook"])
+
+    print("[✔] Ingestion cycle complete.")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--once", action="store_true", help="Run once and exit (for GitHub Actions)")
+    args = parser.parse_args()
+
+    run_pipeline(once=args.once)
