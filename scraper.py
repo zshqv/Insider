@@ -1,7 +1,7 @@
 import re
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class JobScraperEngine:
     def __init__(self, config_path="config.json"):
@@ -14,21 +14,35 @@ class JobScraperEngine:
 
     def is_target_role(self, title, description=""):
         text = f"{title} {description}".lower()
-        
+        title_lower = title.lower()
+
+        # 1. Seniority Exclusions
         senior_patterns = [
             r"\bmanager\b", r"\bhead\b", r"\bdirector\b", r"\blead\b", 
             r"\bprincipal\b", r"\bvp\b", r"\bvice president\b", r"\bchief\b", 
             r"\bsenior\b", r"\bsr\b", r"\bexec\b", r"\bexecutive\b", r"\bhead of\b"
         ]
         for pattern in senior_patterns:
-            if re.search(pattern, title.lower()):
+            if re.search(pattern, title_lower):
                 return False
 
+        # 2. Non-Finance & Generic Support Noise Exclusions
+        noise_patterns = [
+            r"\bcustomer support\b", r"\bcustomer service\b", r"\bhelpdesk\b",
+            r"\bsales representative\b", r"\baccount executive\b", r"\bbusiness development representative\b",
+            r"\bbdr\b", r"\bsdr\b", r"\bcall center\b", r"\btechnical support\b"
+        ]
+        for pattern in noise_patterns:
+            if re.search(pattern, title_lower):
+                return False
+
+        # 3. Year of Experience (YOE) Filtering (Reject 3+ YOE)
         high_yoe_pattern = r"\b([3-9]|\d{2,})\+?\s*(years?|yrs?|yoe)\b"
         if re.search(high_yoe_pattern, text):
             return False
 
-        return any(role in title.lower() for role in self.roles)
+        # 4. Target Roles Match
+        return any(role in title_lower for role in self.roles)
 
     def is_priority_location(self, location_str):
         loc_lower = location_str.lower()
@@ -54,10 +68,17 @@ class JobScraperEngine:
         if not raw_date:
             return datetime.now().strftime("%Y-%m-%d")
         try:
-            # Parses ISO dates like 2026-09-28T12:00:00Z or standard YYYY-MM-DD
             return raw_date.split("T")[0]
         except Exception:
             return datetime.now().strftime("%Y-%m-%d")
+
+    def is_within_recency_cutoff(self, date_str, max_days=30):
+        try:
+            posted_date = datetime.strptime(date_str, "%Y-%m-%d")
+            cutoff_date = datetime.now() - timedelta(days=max_days)
+            return posted_date >= cutoff_date
+        except Exception:
+            return True
 
     def fetch_arbeitnow(self):
         jobs = []
@@ -68,8 +89,9 @@ class JobScraperEngine:
                     title = item.get("title", "")
                     location = item.get("location", "")
                     description = item.get("description", "")
+                    date_posted = self.format_date(item.get("created_at"))
                     
-                    if self.is_target_role(title, description):
+                    if self.is_target_role(title, description) and self.is_within_recency_cutoff(date_posted):
                         is_prio = self.is_priority_location(location) or item.get("remote", False)
                         is_sec = self.is_secondary_location(location)
                         
@@ -83,7 +105,7 @@ class JobScraperEngine:
                                 "source_type": "Aggregator 📦",
                                 "workplace_type": "Remote 🌐" if item.get("remote") else "On-site 🏢",
                                 "is_priority": is_prio,
-                                "date_posted": self.format_date(item.get("created_at"))
+                                "date_posted": date_posted
                             })
         except Exception as e:
             print(f"[!] Arbeitnow fetch failed: {e}")
@@ -98,8 +120,9 @@ class JobScraperEngine:
                     title = item.get("title", "")
                     location = item.get("candidate_required_location", "Worldwide")
                     description = item.get("description", "")
+                    date_posted = self.format_date(item.get("publication_date"))
                     
-                    if self.is_target_role(title, description):
+                    if self.is_target_role(title, description) and self.is_within_recency_cutoff(date_posted):
                         is_prio = self.is_priority_location(location)
                         jobs.append({
                             "title": title,
@@ -110,7 +133,7 @@ class JobScraperEngine:
                             "source_type": "Aggregator 📦",
                             "workplace_type": "Remote 🌐",
                             "is_priority": is_prio,
-                            "date_posted": self.format_date(item.get("publication_date"))
+                            "date_posted": date_posted
                         })
         except Exception as e:
             print(f"[!] Remotive fetch failed: {e}")
@@ -127,8 +150,9 @@ class JobScraperEngine:
                         title = item.get("title", "")
                         location = item.get("location", {}).get("name", "Various")
                         content = item.get("content", "")
+                        date_posted = self.format_date(item.get("updated_at"))
                         
-                        if self.is_target_role(title, content):
+                        if self.is_target_role(title, content) and self.is_within_recency_cutoff(date_posted):
                             is_prio = self.is_priority_location(location)
                             is_sec = self.is_secondary_location(location)
                             
@@ -142,7 +166,7 @@ class JobScraperEngine:
                                     "source_type": "Direct Career Portal 🎯",
                                     "workplace_type": self.detect_workplace_type(title, location),
                                     "is_priority": is_prio,
-                                    "date_posted": self.format_date(item.get("updated_at"))
+                                    "date_posted": date_posted
                                 })
             except Exception as e:
                 print(f"[!] Greenhouse fetch failed for {token}: {e}")
