@@ -1,3 +1,4 @@
+import re
 import json
 import requests
 from datetime import datetime
@@ -14,13 +15,16 @@ class JobScraperEngine:
     def is_target_role(self, title):
         title_lower = title.lower()
         
-        # Filter out senior, management, and executive positions
-        excluded_keywords = [
-            "manager", "head", "director", "lead", "principal", 
-            "vp", "vice president", "chief", "senior manager", "exec"
+        # Strict exclusion rules for senior/executive roles
+        excluded_patterns = [
+            r"\bmanager\b", r"\bhead\b", r"\bdirector\b", r"\blead\b", 
+            r"\bprincipal\b", r"\bvp\b", r"\bvice president\b", r"\bchief\b", 
+            r"\bsenior\b", r"\bsr\b", r"\bexec\b", r"\bexecutive\b", r"\bhead of\b"
         ]
-        if any(ex in title_lower for ex in excluded_keywords):
-            return False
+        
+        for pattern in excluded_patterns:
+            if re.search(pattern, title_lower):
+                return False
 
         return any(role in title_lower for role in self.roles)
 
