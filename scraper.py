@@ -26,7 +26,6 @@ class JobScraperEngine:
                 return False
 
         # 2. Year of Experience (YOE) Filtering (Reject 3+ YOE requirements)
-        # Rejects patterns like "3+ years", "4-6 years", "5+ yoe"
         high_yoe_pattern = r"\b([3-9]|\d{2,})\+?\s*(years?|yrs?|yoe)\b"
         if re.search(high_yoe_pattern, text):
             return False
@@ -36,6 +35,13 @@ class JobScraperEngine:
 
     def is_priority_location(self, location_str):
         loc_lower = location_str.lower()
+        
+        # Exclude region-locked non-India locations even if "remote" is present
+        excluded_regions = ["uk", "united kingdom", "us", "usa", "canada", "emea", "apac", "latam", "europe", "germany"]
+        for region in excluded_regions:
+            if re.search(r'\b' + region + r'\b', loc_lower):
+                return False
+
         return any(p_loc in loc_lower for p_loc in self.priority_locs)
 
     def is_secondary_location(self, location_str):
@@ -98,7 +104,7 @@ class JobScraperEngine:
                             "url": item.get("url"),
                             "source": "Remotive",
                             "workplace_type": "Remote 🌐",
-                            "is_priority": is_prio or True, # Remotive is global/remote priority
+                            "is_priority": is_prio,
                             "date": datetime.now().strftime("%Y-%m-%d")
                         })
         except Exception as e:
