@@ -8,7 +8,6 @@ def load_config(config_path="config.json"):
     with open(config_path, "r") as f:
         config = json.load(f)
     
-    # Priority: Environment Variables (GitHub Secrets) > config.json
     discord_url = os.environ.get("DISCORD_WEBHOOK_URL") or config.get("discord_webhook_url")
     sheet_url = os.environ.get("GOOGLE_SHEET_WEBHOOK") or config.get("google_sheet_webhook")
 
@@ -46,29 +45,23 @@ def send_to_google_sheet(job, webhook_url):
         print("[!] Google Sheet webhook URL not configured.")
         return
 
-    workplace_and_prio = job.get("workplace_type", "On-site 🏢")
-    if job.get("is_priority"):
-        workplace_and_prio += " | ⚡ HIGH PRIORITY"
-    else:
-        workplace_and_prio += " | 🌐 GLOBAL TIER"
-
     payload = {
-        "date": job.get("date"),
         "title": job.get("title"),
         "company": job.get("company"),
         "location": job.get("location"),
         "source": job.get("source"),
         "url": job.get("url"),
-        "status": "New Lead",
-        "notes": workplace_and_prio
+        "workplace": job.get("workplace_type")
     }
 
     try:
+        # allow_redirects=True explicitly handles Apps Script 302 responses
         res = requests.post(
             webhook_url, 
-            json=payload, 
+            data=json.dumps(payload),
             headers={"Content-Type": "application/json"},
-            timeout=10
+            allow_redirects=True,
+            timeout=15
         )
         res.raise_for_status()
         print(f"[✔] Pushed to Sheet: {job.get('title')}")
