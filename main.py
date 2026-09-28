@@ -11,7 +11,6 @@ def load_config(config_path="config.json"):
     discord_url = os.environ.get("DISCORD_WEBHOOK_URL") or config.get("discord_webhook_url")
     sheet_url = os.environ.get("GOOGLE_SHEET_WEBHOOK") or config.get("google_sheet_webhook")
 
-    # Clean potential stray quotes, brackets, or whitespace from environment variables
     if discord_url:
         discord_url = str(discord_url).strip("[]'\" ")
     if sheet_url:
@@ -27,14 +26,18 @@ def send_to_discord(job, webhook_url):
         return
 
     is_prio = job.get("is_priority", False)
-    
-    # Styling
     color = 0xF59E0B if is_prio else 0x3B82F6
-    tag = "⚡ **HIGH PRIORITY LEAD**" if is_prio else "🌐 **GLOBAL / SECONDARY LEAD**"
+    badge = "⚡ **HIGH PRIORITY LEAD**" if is_prio else "🌐 **GLOBAL / SECONDARY LEAD**"
+    date_posted = job.get("date_posted", "Recently")
     
     embed = {
         "title": f"💼 {job['title']}",
-        "description": f"{tag}\n\n**Company:** `{job.get('company', 'N/A')}`\n**Location:** `{job.get('location', 'N/A')}`",
+        "description": (
+            f"{badge}\n\n"
+            f"**Company:** `{job.get('company', 'N/A')}`\n"
+            f"**Location:** `{job.get('location', 'N/A')}`\n"
+            f"**Date Posted:** `{date_posted}`"
+        ),
         "color": color,
         "fields": [
             {"name": "📍 Workplace", "value": f"`{job.get('workplace_type', 'N/A')}`", "inline": True},
@@ -42,7 +45,7 @@ def send_to_discord(job, webhook_url):
             {"name": "🔗 Application", "value": f"[**Apply directly on {job.get('source', 'Portal')} ↗**]({job.get('url')})", "inline": False}
         ],
         "footer": {
-            "text": f"Career Intelligence Pipeline  •  {job.get('date')}"
+            "text": f"Career Intelligence Pipeline • Ingested {date_posted}"
         }
     }
 
@@ -54,10 +57,7 @@ def send_to_discord(job, webhook_url):
         print(f"[!] Failed to send job to Discord: {e}")
 
 def send_to_google_sheet(job, webhook_url):
-    print(f"[*] Attempting Sheet sync for: {job.get('title')}")
-    
     if not webhook_url or "YOUR_GOOGLE_SHEET" in webhook_url or not webhook_url.startswith("http"):
-        print(f"[!] ERROR: GOOGLE_SHEET_WEBHOOK is invalid or missing protocol. Received: '{webhook_url}'")
         return
 
     payload = {
@@ -66,25 +66,18 @@ def send_to_google_sheet(job, webhook_url):
         "location": job.get("location"),
         "source": job.get("source"),
         "url": job.get("url"),
-        "workplace": job.get("workplace_type")
+        "workplace": job.get("workplace_type"),
+        "date_posted": job.get("date_posted")
     }
 
     try:
-        res = requests.post(
+        requests.post(
             webhook_url, 
             data=json.dumps(payload),
             headers={"Content-Type": "application/json"},
             allow_redirects=True,
             timeout=15
         )
-        print(f"[*] Sheet API Status Code: {res.status_code}")
-        print(f"[*] Sheet API Raw Response: {res.text}")
-        
-        if res.status_code == 200:
-            print(f"[✔] Pushed to Sheet: {job.get('title')}")
-        else:
-            print(f"[!] Sheet POST returned non-200 status code: {res.status_code}")
-
     except Exception as e:
         print(f"[!] Exception during Google Sheet HTTP POST: {e}")
 
@@ -96,7 +89,9 @@ def run_pipeline(once=False):
     jobs = engine.run_all()
     print(f"[*] Scrape complete. Found {len(jobs)} eligible roles.")
 
-    for job in jobs[:config.get("max_results_per_run", 30)]:
+    processed = jobs[:config.get("max_results_per_run", 30)]
+
+    for job in processed:
         send_to_discord(job, config["discord_webhook_url"])
         send_to_google_sheet(job, config["google_sheet_webhook"])
 
