@@ -55,7 +55,6 @@ def send_to_google_sheet(job, webhook_url):
     }
 
     try:
-        # allow_redirects=True explicitly handles Apps Script 302 responses
         res = requests.post(
             webhook_url, 
             data=json.dumps(payload),
