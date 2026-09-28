@@ -1,45 +1,24 @@
 {
   "target_roles": [
     "finance",
+    "analyst",
+    "investment banking",
+    "equity research",
     "financial analyst",
     "corporate finance",
-    "fp&a",
-    "treasury",
-    "m&a",
-    "audit",
-    "accounting",
-    "credit analyst",
     "business analyst",
-    "data analyst",
-    "financial operations",
-    "deal desk",
-    "financial planning",
-    "commercial analyst"
+    "valuation"
   ],
   "priority_locations": [
-    "india",
     "mumbai",
+    "india",
     "remote"
   ],
   "secondary_locations": [
-    "germany",
-    "switzerland",
-    "united kingdom",
-    "united states",
-    "singapore",
-    "hong kong",
-    "luxembourg",
-    "netherlands",
-    "france",
-    "ireland"
+    "worldwide",
+    "anywhere"
   ],
-  "experience_level": [
-    "entry-level",
-    "junior",
-    "internship"
-  ],
-  "discord_webhook_url": "YOUR_DISCORD_WEBHOOK_URL_HERE",
-  "google_sheet_webhook": "YOUR_GOOGLE_SHEET_WEBHOOK_URL_HERE",
-  "check_interval_hours": 0.5,
-  "max_results_per_run": 30
+  "max_results_per_run": 30,
+  "discord_webhook_url": "YOUR_DISCORD_WEBHOOK_URL",
+  "google_sheet_webhook": "YOUR_GOOGLE_SHEET_WEBHOOK"
 }
