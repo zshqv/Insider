@@ -1,56 +1,45 @@
 {
-    "target_roles": [
-      "finance",
-      "financial analyst",
-      "corporate finance",
-      "fp&a",
-      "treasury",
-      "m&a",
-      "audit",
-      "accounting",
-      "credit analyst",
-      "business analyst",
-      "data analyst",
-      "financial operations",
-      "deal desk",
-      "financial planning",
-      "commercial analyst"
-    ],
-    "target_locations": [
-      "remote",
-      "germany",
-      "switzerland",
-      "united kingdom",
-      "india",
-      "united states",
-      "japan",
-      "korea",
-      "south korea",
-      "singapore",
-      "hong kong",
-      "luxembourg",
-      "netherlands",
-      "france",
-      "ireland",
-      "sweden",
-      "denmark",
-      "zurich",
-      "frankfurt",
-      "london",
-      "paris",
-      "amsterdam",
-      "dublin",
-      "tokyo",
-      "seoul",
-      "mumbai"
-    ],
-    "experience_level": [
-      "entry-level",
-      "junior",
-      "internship"
-    ],
-    "discord_webhook_url": "https://discord.com/api/webhooks/1553666477444440084/gjqtAZin6dGsK8PlMovO_Isdud2zWMHmL3OCab9q-cUtDLNhlfMJ65ufShtK_Ilc-U3a",
-    "google_sheet_webhook": "https://script.google.com/macros/s/AKfycbwf8TcTPB3olADD7XGRtZ-L007nxzGA0QQOQD6fWwk6yudjoqt7P6s7KXHeUlHr0QIg/exec",
-    "check_interval_hours": 0.5,
-    "max_results_per_run": 25
-  }
+  "target_roles": [
+    "finance",
+    "financial analyst",
+    "corporate finance",
+    "fp&a",
+    "treasury",
+    "m&a",
+    "audit",
+    "accounting",
+    "credit analyst",
+    "business analyst",
+    "data analyst",
+    "financial operations",
+    "deal desk",
+    "financial planning",
+    "commercial analyst"
+  ],
+  "priority_locations": [
+    "india",
+    "mumbai",
+    "remote"
+  ],
+  "secondary_locations": [
+    "germany",
+    "switzerland",
+    "united kingdom",
+    "united states",
+    "singapore",
+    "hong kong",
+    "luxembourg",
+    "netherlands",
+    "france",
+    "ireland"
+  ],
+  "experience_level": [
+    "entry-level",
+    "junior",
+    "internship"
+  ],
+  "discord_webhook_url": "YOUR_DISCORD_WEBHOOK_URL_HERE",
+  "google_sheet_webhook": "YOUR_GOOGLE_SHEET_WEBHOOK_URL_HERE",
+  "check_interval_hours": 0.5,
+  "max_results_per_run": 30
+}

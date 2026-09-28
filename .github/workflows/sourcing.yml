@@ -1,33 +1,29 @@
-name: Insider 24/7 Sourcing Engine
+name: Career Intelligence Ingestion Pipeline
 
 on:
   schedule:
-    # Runs automatically every 30 minutes
-    - cron: '*/30 * * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI for testing
+    - cron: '*/30 * * * *'  # Runs automatically every 30 minutes in the cloud
+  workflow_dispatch:        # Allows manual run button in GitHub UI
 
 jobs:
-  scrape-and-notify:
+  run-scraper:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
+      - name: Check out repo
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt || pip install requests
 
-      - name: Run Sourcing Pipeline
+      - name: Execute Scraper Pipeline
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_SHEET_WEBHOOK: ${{ secrets.GOOGLE_SHEET_WEBHOOK }}
         run: python main.py --once
-        
