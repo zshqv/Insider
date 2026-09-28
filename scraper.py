@@ -1,166 +1,115 @@
 import json
-from datetime import datetime
 import requests
+from datetime import datetime
 
+class JobScraperEngine:
+    def __init__(self, config_path="config.json"):
+        with open(config_path, "r") as f:
+            self.config = json.load(f)
+        
+        self.roles = [r.lower() for r in self.config.get("target_roles", [])]
+        self.priority_locs = [l.lower() for l in self.config.get("priority_locations", ["india", "mumbai", "remote"])]
+        self.secondary_locs = [l.lower() for l in self.config.get("secondary_locations", [])]
 
-def load_config():
-    try:
-        with open("config.json", "r") as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-class JobScraper:
-    def __init__(self, config=None):
-        if config is None:
-            config = load_config()
-        self.target_titles = [t.lower() for t in config.get("target_roles", [])]
-        self.locations = [l.lower() for l in config.get("target_locations", [])]
-
-        # Seniority exclusions (filters out roles requiring 3-5+ YOE)
-        self.seniority_exclusions = [
-            "senior", "sr.", "sr ", "lead", "principal", "head of", "director", "manager", "vp", "vice president"
-        ]
-
-        # Non-finance engineering/operational exclusions
-        self.tech_exclusions = [
-            "full stack", "frontend", "backend", "devops", "software engineer",
-            "react", "node", "java", "salesforce", "recruiter", "marketing",
-            "customer support", "driver", "nursing", "fitness"
-        ]
-
-        # Market & Trading exclusions
-        self.market_exclusions = [
-            "trader", "trading", "market maker", "execution", "derivatives", 
-            "fixed income", "equity sales", "commodities", "fx trader", "algo trading"
-        ]
-
-    def _format_date(self, raw_date):
-        if not raw_date:
-            return datetime.now().strftime("%Y-%m-%d")
-        if isinstance(raw_date, (int, float)):
-            return datetime.fromtimestamp(raw_date).strftime("%Y-%m-%d")
-        try:
-            return datetime.fromtimestamp(int(raw_date)).strftime("%Y-%m-%d")
-        except (ValueError, TypeError):
-            return str(raw_date)[:10]
-
-    def _determine_workplace_type(self, title, location, job_data=None):
-        combined = f"{title} {location}".lower()
-        if "hybrid" in combined:
-            return "Hybrid"
-        elif "remote" in combined or (job_data and job_data.get("remote")):
-            return "Remote"
-        return "On-site"
-
-    def _is_valid_lead(self, title, location):
+    def is_target_role(self, title):
         title_lower = title.lower()
-        location_lower = location.lower()
+        return any(role in title_lower for role in self.roles)
 
-        # 1. Skip senior/lead roles
-        if any(sen in title_lower for sen in self.seniority_exclusions):
-            return False
+    def is_priority_location(self, location_str):
+        loc_lower = location_str.lower()
+        return any(p_loc in loc_lower for p_loc in self.priority_locs)
 
-        # 2. Skip non-finance tech roles
-        if any(tech in title_lower for tech in self.tech_exclusions):
-            return False
-
-        # 3. Skip market-facing and trading roles
-        if any(mkt in title_lower for mkt in self.market_exclusions):
-            return False
-
-        # 4. Target role keyword matching
-        title_match = any(target in title_lower for target in self.target_titles) if self.target_titles else True
-
-        # 5. Geographic region matching
-        location_match = any(loc in location_lower for loc in self.locations) if self.locations else True
-
-        return title_match and location_match
+    def detect_workplace_type(self, title, location, description=""):
+        combined = f"{title} {location} {description}".lower()
+        if "remote" in combined:
+            return "Remote 🌐"
+        elif "hybrid" in combined:
+            return "Hybrid 🏢"
+        return "On-site 🏢"
 
     def fetch_arbeitnow(self):
-        url = "https://www.arbeitnow.com/api/job-board-api"
-        leads = []
+        jobs = []
         try:
-            res = requests.get(url, timeout=10)
-            res.raise_for_status()
-            for job in res.json().get("data", []):
-                title = job.get("title", "")
-                loc = job.get("location", "")
-                if self._is_valid_lead(title, loc):
-                    leads.append({
-                        "title": title,
-                        "company": job.get("company_name", "N/A"),
-                        "location": loc,
-                        "workplace_type": self._determine_workplace_type(title, loc, job),
-                        "url": job.get("url", ""),
-                        "date": self._format_date(job.get("created_at")),
-                        "source": "Arbeitnow"
-                    })
+            res = requests.get("https://www.arbeitnow.com/api/job-board-api", timeout=10)
+            if res.status_code == 200:
+                for item in res.json().get("data", []):
+                    title = item.get("title", "")
+                    location = item.get("location", "")
+                    if self.is_target_role(title):
+                        is_prio = self.is_priority_location(location) or item.get("remote", False)
+                        jobs.append({
+                            "title": title,
+                            "company": item.get("company_name", "Unknown"),
+                            "location": location,
+                            "url": item.get("url"),
+                            "source": "Arbeitnow",
+                            "workplace_type": "Remote 🌐" if item.get("remote") else "On-site 🏢",
+                            "is_priority": is_prio,
+                            "date": datetime.now().strftime("%Y-%m-%d")
+                        })
         except Exception as e:
-            print(f"⚠️ Arbeitnow API fetch failed: {e}")
-        return leads
+            print(f"[!] Arbeitnow fetch failed: {e}")
+        return jobs
 
     def fetch_remotive(self):
-        url = "https://remotive.com/api/remote-jobs?category=finance-legal"
-        leads = []
+        jobs = []
         try:
-            res = requests.get(url, timeout=10)
-            res.raise_for_status()
-            for job in res.json().get("jobs", []):
-                title = job.get("title", "")
-                loc = job.get("candidate_required_location", "Remote")
-                if self._is_valid_lead(title, loc):
-                    leads.append({
-                        "title": title,
-                        "company": job.get("company_name", "N/A"),
-                        "location": loc or "Remote",
-                        "workplace_type": "Remote",
-                        "url": job.get("url", ""),
-                        "date": self._format_date(job.get("publication_date")),
-                        "source": "Remotive"
-                    })
+            res = requests.get("https://remotive.com/api/remote-jobs?category=finance-legal", timeout=10)
+            if res.status_code == 200:
+                for item in res.json().get("jobs", []):
+                    title = item.get("title", "")
+                    location = item.get("candidate_required_location", "Worldwide")
+                    if self.is_target_role(title):
+                        jobs.append({
+                            "title": title,
+                            "company": item.get("company_name", "Unknown"),
+                            "location": location,
+                            "url": item.get("url"),
+                            "source": "Remotive",
+                            "workplace_type": "Remote 🌐",
+                            "is_priority": True,
+                            "date": datetime.now().strftime("%Y-%m-%d")
+                        })
         except Exception as e:
-            print(f"⚠️ Remotive API fetch failed: {e}")
-        return leads
+            print(f"[!] Remotive fetch failed: {e}")
+        return jobs
 
-    def fetch_jobicy(self):
-        url = "https://jobicy.com/api/v2/remote-jobs?industry=finance"
-        leads = []
-        try:
-            res = requests.get(url, timeout=10)
-            res.raise_for_status()
-            for job in res.json().get("jobs", []):
-                title = job.get("jobTitle", "")
-                loc = job.get("jobGeo", "Remote")
-                if self._is_valid_lead(title, loc):
-                    leads.append({
-                        "title": title,
-                        "company": job.get("companyName", "N/A"),
-                        "location": loc or "Remote",
-                        "workplace_type": self._determine_workplace_type(title, loc),
-                        "url": job.get("url", ""),
-                        "date": self._format_date(job.get("pubDate")),
-                        "source": "Jobicy"
-                    })
-        except Exception as e:
-            print(f"⚠️ Jobicy API fetch failed: {e}")
-        return leads
+    def fetch_greenhouse_boards(self, board_tokens=["stripe", "coinbase", "revolut", "binance", "brex"]):
+        jobs = []
+        for token in board_tokens:
+            try:
+                url = f"https://boards-api.greenhouse.io/v1/boards/{token}/jobs"
+                res = requests.get(url, timeout=8)
+                if res.status_code == 200:
+                    for item in res.json().get("jobs", []):
+                        title = item.get("title", "")
+                        location = item.get("location", {}).get("name", "Various")
+                        if self.is_target_role(title):
+                            jobs.append({
+                                "title": title,
+                                "company": token.capitalize(),
+                                "location": location,
+                                "url": item.get("absolute_url"),
+                                "source": f"Greenhouse ({token.capitalize()})",
+                                "workplace_type": self.detect_workplace_type(title, location),
+                                "is_priority": self.is_priority_location(location),
+                                "date": datetime.now().strftime("%Y-%m-%d")
+                            })
+            except Exception as e:
+                print(f"[!] Greenhouse fetch failed for {token}: {e}")
+        return jobs
 
-    def run(self):
-        print("🔍 Querying multi-source pipeline (Arbeitnow, Remotive, Jobicy)...")
-        all_leads = []
-        all_leads.extend(self.fetch_arbeitnow())
-        all_leads.extend(self.fetch_remotive())
-        all_leads.extend(self.fetch_jobicy())
-
-        # Deduplicate leads based on title + company combination
-        unique_leads = {}
-        for lead in all_leads:
-            unique_key = f"{lead['title'].lower()}-{lead['company'].lower()}"
-            if unique_key not in unique_leads:
-                unique_leads[unique_key] = lead
-
-        final_leads = list(unique_leads.values())
-        print(f"✅ Extracted {len(final_leads)} deduplicated early-career finance lead(s).")
-        return final_leads
+    def run_all(self):
+        all_jobs = []
+        all_jobs.extend(self.fetch_arbeitnow())
+        all_jobs.extend(self.fetch_remotive())
+        all_jobs.extend(self.fetch_greenhouse_boards())
+        
+        seen_urls = set()
+        deduped_jobs = []
+        for job in all_jobs:
+            if job["url"] not in seen_urls:
+                seen_urls.add(job["url"])
+                deduped_jobs.append(job)
+                
+        return deduped_jobs
