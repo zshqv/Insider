@@ -11,6 +11,12 @@ def load_config(config_path="config.json"):
     discord_url = os.environ.get("DISCORD_WEBHOOK_URL") or config.get("discord_webhook_url")
     sheet_url = os.environ.get("GOOGLE_SHEET_WEBHOOK") or config.get("google_sheet_webhook")
 
+    # Clean potential stray quotes, brackets, or whitespace from environment variables
+    if discord_url:
+        discord_url = str(discord_url).strip("[]'\" ")
+    if sheet_url:
+        sheet_url = str(sheet_url).strip("[]'\" ")
+
     config["discord_webhook_url"] = discord_url
     config["google_sheet_webhook"] = sheet_url
     return config
@@ -43,19 +49,16 @@ def send_to_discord(job, webhook_url):
     try:
         res = requests.post(webhook_url, json={"embeds": [embed]}, timeout=10)
         res.raise_for_status()
-        print(f"[✔] Upgraded Discord alert sent for: {job.get('title')}")
+        print(f"[✔] Discord alert sent for: {job.get('title')}")
     except Exception as e:
         print(f"[!] Failed to send job to Discord: {e}")
 
 def send_to_google_sheet(job, webhook_url):
     print(f"[*] Attempting Sheet sync for: {job.get('title')}")
     
-    if not webhook_url or "YOUR_GOOGLE_SHEET" in webhook_url:
-        print("[!] ERROR: GOOGLE_SHEET_WEBHOOK environment variable is missing or unconfigured in GitHub Secrets!")
+    if not webhook_url or "YOUR_GOOGLE_SHEET" in webhook_url or not webhook_url.startswith("http"):
+        print(f"[!] ERROR: GOOGLE_SHEET_WEBHOOK is invalid or missing protocol. Received: '{webhook_url}'")
         return
-
-    masked_url = webhook_url[:40] + "..." if len(webhook_url) > 40 else webhook_url
-    print(f"[*] Targeting Webhook URL: {masked_url}")
 
     payload = {
         "title": job.get("title"),
