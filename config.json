@@ -1,22 +1,30 @@
 {
   "target_roles": [
-    "finance",
+    "intern",
+    "internship",
+    "trainee",
+    "apprentice",
+    "fresher",
+    "junior",
     "analyst",
+    "associate",
+    "finance",
     "investment banking",
     "equity research",
     "financial analyst",
     "corporate finance",
     "business analyst",
-    "valuation"
+    "valuation",
+    "m&a"
   ],
   "priority_locations": [
     "mumbai",
-    "india",
     "remote"
   ],
   "secondary_locations": [
+    "india",
     "worldwide",
-    "anywhere"
+    "remote"
   ],
   "max_results_per_run": 30,
   "discord_webhook_url": "YOUR_DISCORD_WEBHOOK_URL",
