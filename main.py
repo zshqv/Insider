@@ -20,24 +20,30 @@ def send_to_discord(job, webhook_url):
         print("[!] Discord webhook URL not configured.")
         return
 
-    priority_prefix = "⚡ [HIGH PRIORITY] " if job.get("is_priority") else "🌐 "
+    is_prio = job.get("is_priority", False)
+    
+    # Styling
+    color = 0xF59E0B if is_prio else 0x3B82F6
+    tag = "⚡ **HIGH PRIORITY LEAD**" if is_prio else "🌐 **GLOBAL / SECONDARY LEAD**"
+    
     embed = {
-        "title": f"{priority_prefix}{job['title']}",
-        "color": 5814783 if job.get("is_priority") else 3447003,
+        "title": f"💼 {job['title']}",
+        "description": f"{tag}\n\n**Company:** `{job.get('company', 'N/A')}`\n**Location:** `{job.get('location', 'N/A')}`",
+        "color": color,
         "fields": [
-            {"name": "Company", "value": job.get("company", "N/A"), "inline": True},
-            {"name": "Location", "value": job.get("location", "N/A"), "inline": True},
-            {"name": "Workplace", "value": job.get("workplace_type", "N/A"), "inline": True},
-            {"name": "Source", "value": job.get("source", "N/A"), "inline": True},
-            {"name": "Apply Link", "value": f"[Apply Here]({job.get('url')})", "inline": False}
+            {"name": "📍 Workplace", "value": f"`{job.get('workplace_type', 'N/A')}`", "inline": True},
+            {"name": "📡 Source", "value": f"`{job.get('source', 'N/A')}`", "inline": True},
+            {"name": "🔗 Application", "value": f"[**Apply directly on {job.get('source', 'Portal')} ↗**]({job.get('url')})", "inline": False}
         ],
-        "footer": {"text": f"Ingestion Pipeline | {job.get('date')}"}
+        "footer": {
+            "text": f"Career Intelligence Pipeline  •  {job.get('date')}"
+        }
     }
 
     try:
         res = requests.post(webhook_url, json={"embeds": [embed]}, timeout=10)
         res.raise_for_status()
-        print(f"[✔] Discord alert sent for: {job.get('title')}")
+        print(f"[✔] Upgraded Discord alert sent for: {job.get('title')}")
     except Exception as e:
         print(f"[!] Failed to send job to Discord: {e}")
 
@@ -48,7 +54,6 @@ def send_to_google_sheet(job, webhook_url):
         print("[!] ERROR: GOOGLE_SHEET_WEBHOOK environment variable is missing or unconfigured in GitHub Secrets!")
         return
 
-    # Print truncated URL for debug without leaking tokens
     masked_url = webhook_url[:40] + "..." if len(webhook_url) > 40 else webhook_url
     print(f"[*] Targeting Webhook URL: {masked_url}")
 
