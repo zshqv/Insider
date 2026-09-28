@@ -1,29 +1,33 @@
-name: Career Intelligence Ingestion Pipeline
+name: Career Intelligence Sourcing Pipeline
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # Runs automatically every 30 minutes in the cloud
-  workflow_dispatch:        # Allows manual run button in GitHub UI
+    # Runs every 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
 
 jobs:
-  run-scraper:
+  scrape-and-notify:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Check out repo
+      - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || pip install requests
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Execute Scraper Pipeline
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           GOOGLE_SHEET_WEBHOOK: ${{ secrets.GOOGLE_SHEET_WEBHOOK }}
-        run: python main.py --once
+        run: |
+          python main.py --once
