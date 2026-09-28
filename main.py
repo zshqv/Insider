@@ -58,6 +58,7 @@ def send_to_discord(job, webhook_url):
 
 def send_to_google_sheet(job, webhook_url):
     if not webhook_url or "YOUR_GOOGLE_SHEET" in webhook_url or not webhook_url.startswith("http"):
+        print("[!] Google Sheet webhook URL missing or unconfigured.")
         return
 
     payload = {
@@ -71,13 +72,18 @@ def send_to_google_sheet(job, webhook_url):
     }
 
     try:
-        requests.post(
+        res = requests.post(
             webhook_url, 
             data=json.dumps(payload),
             headers={"Content-Type": "application/json"},
             allow_redirects=True,
             timeout=15
         )
+        print(f"[*] Google Sheet POST Status: {res.status_code} | Response: {res.text.strip()[:100]}")
+        if res.status_code == 200:
+            print(f"[✔] Successfully logged job to Google Sheet: {job.get('title')}")
+        else:
+            print(f"[!] Sheet POST unexpected status {res.status_code}: {res.text}")
     except Exception as e:
         print(f"[!] Exception during Google Sheet HTTP POST: {e}")
 
