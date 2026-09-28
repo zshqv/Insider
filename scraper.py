@@ -13,6 +13,15 @@ class JobScraperEngine:
 
     def is_target_role(self, title):
         title_lower = title.lower()
+        
+        # Filter out senior, management, and executive positions
+        excluded_keywords = [
+            "manager", "head", "director", "lead", "principal", 
+            "vp", "vice president", "chief", "senior manager", "exec"
+        ]
+        if any(ex in title_lower for ex in excluded_keywords):
+            return False
+
         return any(role in title_lower for role in self.roles)
 
     def is_priority_location(self, location_str):
