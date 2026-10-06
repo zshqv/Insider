@@ -98,6 +98,41 @@ The included workflow runs twice daily (11 AM and 7 PM IST). Add your secrets un
 
 **Add a new source** → create `insider/sources/yoursite.py` with a `fetch(filter_fn)` function, register it in `insider/sources/__init__.py`.
 
+For a full walkthrough, see **[SETUP.md](./SETUP.md)**.
+
+## Adapt Insider with AI
+
+Don't have Claude Code? Copy this prompt into any AI assistant (Claude, ChatGPT, etc.) to get help customising Insider for your niche:
+
+<details>
+<summary>Click to expand prompt</summary>
+
+```
+I forked the Insider job-sourcing pipeline (https://github.com/zshqv/Insider).
+It scrapes 7 job board APIs, filters by role/seniority/location, and posts
+matching jobs to Discord.
+
+Help me customise it for my job search. Here's what I'm looking for:
+
+- Roles: [e.g. "software engineer", "data scientist", "product manager"]
+- Seniority: [e.g. "entry-level only", "mid-level", "any"]
+- Locations I want (Tier 1 priority): [e.g. "San Francisco", "New York"]
+- Other acceptable locations (Tier 2): [e.g. "Seattle", "Austin", "Remote US"]
+- Industries/fields to EXCLUDE from results: [e.g. "finance", "healthcare"]
+
+Based on this, generate:
+1. An updated config.json with my target roles
+2. An updated config/filters.yaml with my seniority rules, noise exclusions,
+   and location tiers
+3. An updated config/companies.yaml with relevant company board slugs
+   (Greenhouse/Lever/Ashby) for my target industry
+4. Any changes needed in insider/sources/adzuna.py (categories and countries)
+
+Keep the same file structure and format as the originals in the repo.
+```
+
+</details>
+
 ## License
 
 MIT © [ashu](./LICENSE)
