@@ -1,0 +1,189 @@
+# --- Seniority filter ---
+# Only these levels pass; everything else is rejected.
+allowed_levels:
+  - intern
+  - internship
+  - trainee
+  - apprentice
+  - apprenticeship
+  - fresher
+  - junior
+  - entry level
+  - entry-level
+  - new grad
+  - graduate
+  - associate
+
+# Titles containing any of these words are always rejected, regardless of role match.
+seniority_block:
+  - manager
+  - head
+  - director
+  - lead
+  - principal
+  - vp
+  - vice president
+  - chief
+  - senior
+  - sr
+  - exec
+  - executive
+  - head of
+  - staff
+  - mid-level
+  - mid level
+  - experienced
+  - controller
+  - treasurer
+
+# Non-finance noise titles to reject.
+noise_block:
+  - customer support
+  - customer service
+  - helpdesk
+  - sales representative
+  - account executive
+  - business development representative
+  - bdr
+  - sdr
+  - call center
+  - technical support
+  # Engineering / tech
+  - software engineer
+  - software developer
+  - frontend
+  - front-end
+  - backend
+  - back-end
+  - full stack
+  - fullstack
+  - devops
+  - sre
+  - site reliability
+  - data engineer
+  - machine learning
+  - ml engineer
+  - ai engineer
+  - cloud engineer
+  - infrastructure engineer
+  - platform engineer
+  - security engineer
+  - qa engineer
+  - test engineer
+  - embedded engineer
+  - firmware
+  - ios developer
+  - android developer
+  - mobile developer
+  - web developer
+  # Design / creative
+  - graphic designer
+  - ui designer
+  - ux designer
+  - product designer
+  - visual designer
+  - motion designer
+  - video editor
+  - content writer
+  - copywriter
+  # Marketing / HR / ops
+  - marketing
+  - social media
+  - recruiter
+  - talent acquisition
+  - human resources
+  - hr generalist
+  - supply chain
+  - logistics
+  - warehouse
+  - procurement
+  - legal counsel
+  - paralegal
+
+# Max years of experience allowed in title+description (inclusive).
+max_yoe: 2
+
+# --- Location tiers ---
+# Tier 1: Mumbai or genuinely fully-remote (no geo restriction).
+# Tier 2: Other India, worldwide.
+# Tier 3: Everything else -> data/tier3.jsonl, no Discord.
+
+tier1_locations:
+  - mumbai
+
+tier2_locations:
+  - india
+  - bangalore
+  - bengaluru
+  - hyderabad
+  - pune
+  - delhi
+  - gurgaon
+  - gurugram
+  - noida
+  - chennai
+  - kolkata
+  - worldwide
+
+# Phrases in location or description that mean "remote but geo-fenced" -> NOT fully remote.
+remote_geo_fence:
+  - within
+  - radius
+  - miles of
+  - km of
+  - must be based in
+  - must be located in
+  - commutable
+  - commuting distance
+  - on-site days
+  - days in office
+  - days in-office
+  - hybrid remote
+
+# Regions that disqualify a "remote" job (remote-US, remote-UK, etc.)
+remote_region_block:
+  - us
+  - usa
+  - united states
+  - uk
+  - united kingdom
+  - canada
+  - emea
+  - apac
+  - latam
+  - europe
+  - germany
+  - australia
+  - france
+  - spain
+  - italy
+  - netherlands
+  - ireland
+  - luxembourg
+  - switzerland
+  - sweden
+  - norway
+  - denmark
+  - finland
+  - portugal
+  - austria
+  - belgium
+  - japan
+  - singapore
+  - brazil
+  - mexico
+  - argentina
+
+# --- Internship badges ---
+# If a title matches any of these, tag with conversion/PPO badge.
+conversion_signals:
+  - intern to full
+  - intern-to-full
+  - ppo
+  - pre-placement
+  - pre placement
+  - convert
+  - conversion
+  - full-time offer
+  - full time offer
+  - return offer
