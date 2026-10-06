@@ -26,7 +26,5 @@
     "worldwide",
     "remote"
   ],
-  "max_results_per_run": 30,
-  "discord_webhook_url": "YOUR_DISCORD_WEBHOOK_URL",
-  "google_sheet_webhook": "YOUR_GOOGLE_SHEET_WEBHOOK"
+  "max_results_per_run": 30
 }
