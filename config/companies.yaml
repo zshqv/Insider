@@ -1,0 +1,62 @@
+# Company job boards to scrape.
+# Each section lists board slugs/tokens for that platform's API.
+
+greenhouse:
+  # Global fintechs & finance
+  - stripe
+  - coinbase
+  - revolut
+  - binance
+  - brex
+  - plaid
+  - affirm
+  - wise
+  - robinhood
+  - sofi
+  - chime
+  - nubank
+  - checkout
+  - marqeta
+  - melio
+  - ramp
+  - mercury
+  - m1finance
+  # Indian fintechs
+  - razorpay
+  - cred
+  - groww
+  - zerodha
+  - paytm
+  - phonepe
+  - bharatpe
+  - jupiter
+  - rupeek
+  - niyo
+  - fi
+  - slice
+  - lendingkart
+  - credgenics
+
+lever:
+  - angel-oak
+  - clearco
+  - bluevine
+  - moderntreasury
+  - column
+  - bracebridge-capital
+  - nuvei
+  - deel
+  - sardine
+  - unit
+
+ashby:
+  - ramp
+  - brex
+  - mercury
+  - jeeves
+  - lithic
+  - treasure-financial
+  - highradius
+  - novo
+  - found
+  - slope
