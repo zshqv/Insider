@@ -1,0 +1,38 @@
+import requests
+from insider.sources._common import load_companies, format_date, within_recency, detect_workplace, job
+
+
+def fetch(filter_fn):
+    slugs = load_companies().get("ashby", [])
+    jobs = []
+    for slug in slugs:
+        try:
+            url = f"https://api.ashbyhq.com/posting-api/job-board/{slug}"
+            res = requests.get(url, timeout=10)
+            if res.status_code != 200:
+                continue
+            for item in res.json().get("jobs", []):
+                title = item.get("title", "")
+                loc = item.get("location", "Various")
+                date_posted = format_date(item.get("publishedAt"))
+
+                if not filter_fn(title, "") or not within_recency(date_posted):
+                    continue
+
+                apply_url = item.get("jobUrl", f"https://jobs.ashbyhq.com/{slug}/{item.get('id', '')}")
+
+                jobs.append(job(
+                    title=title,
+                    company=slug.replace("-", " ").title(),
+                    location=loc,
+                    url=apply_url,
+                    source=f"Ashby ({slug.replace('-', ' ').title()})",
+                    job_id=item.get("id"),
+                    source_type="Direct Career Portal 🎯",
+                    workplace=detect_workplace(title, loc),
+                    is_priority=False,
+                    date_posted=date_posted,
+                ))
+        except Exception as e:
+            print(f"[!] Ashby fetch failed for {slug}: {e}")
+    return jobs
