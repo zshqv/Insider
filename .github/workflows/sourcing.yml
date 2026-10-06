@@ -2,9 +2,13 @@ name: Career Intelligence Sourcing Pipeline
 
 on:
   schedule:
-    # Runs every 30 minutes
     - cron: '*/30 * * * *'
   workflow_dispatch:
+
+# Never run two pipelines at once: both would read the same seen.json and double-post.
+concurrency:
+  group: sourcing
+  cancel-in-progress: false
 
 jobs:
   scrape-and-notify:
@@ -25,9 +29,29 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+      # Cache entries are immutable, so each run saves under a new key and the next
+      # run restores the most recent one via the prefix match.
+      - name: Restore dedupe state
+        uses: actions/cache/restore@v4
+        with:
+          path: data/
+          key: insider-state-${{ github.run_id }}
+          restore-keys: |
+            insider-state-
+
       - name: Execute Scraper Pipeline
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           GOOGLE_SHEET_WEBHOOK: ${{ secrets.GOOGLE_SHEET_WEBHOOK }}
+          SHEET_ENABLED: ${{ vars.SHEET_ENABLED }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
         run: |
           python main.py --once
+
+      - name: Save dedupe state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/
+          key: insider-state-${{ github.run_id }}
