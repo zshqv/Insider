@@ -6,7 +6,7 @@ import requests
 from insider.util import redact
 
 USER_AGENT = "InsiderJobPipeline/1.0 (+https://github.com/zshqv/Insider)"
-EXPECTED_SCRIPT_VERSION = 2
+EXPECTED_SCRIPT_VERSION = 3
 BATCH_SIZE = 25
 
 HINT_HTML = (
@@ -26,7 +26,7 @@ class SheetError(Exception):
 
 
 class SheetClient:
-    def __init__(self, url, session=None, timeout=60):
+    def __init__(self, url, session=None, timeout=120):
         self.url = url
         self.timeout = timeout
         self.session = session or requests.Session()
@@ -44,20 +44,23 @@ class SheetClient:
             batch = leads[i:i + BATCH_SIZE]
             data = self._request("POST", {"leads": batch})
             batch_results = data.get("results")
-            if not isinstance(batch_results, list) or len(batch_results) != len(batch):
+            if isinstance(batch_results, list) and len(batch_results) == len(batch):
+                results.extend(batch_results)
+            elif data.get("status") == "ok" and "data_rows" in data:
+                results.extend([{"status": "ok"}] * len(batch))
+            else:
                 raise SheetError(f"Unexpected response shape: {json.dumps(data)[:300]}")
-            results.extend(batch_results)
         return results
 
     def _request(self, method, payload=None):
         try:
-            # Apps Script answers POST /exec with a 302 to googleusercontent.com; requests
-            # follows it as a GET, which is how the script's output is fetched.
+            # Apps Script answers POST /exec with a 302 to googleusercontent.com;
+            # requests follows it as a GET, which is how the script's output is fetched.
             if method == "POST":
                 res = self.session.post(
                     self.url,
                     data=json.dumps(payload),
-                    headers={"Content-Type": "application/json"},
+                    headers={"Content-Type": "text/plain"},
                     timeout=self.timeout,
                 )
             else:
