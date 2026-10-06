@@ -104,9 +104,11 @@ function setupSheet() {
   sheet.setColumnWidth(8, 130);  // Status
   sheet.setColumnWidth(9, 100);  // Tier
 
-  // Status dropdown (rows 2-1000)
+  var MAX_ROWS = 200;
+
+  // Status dropdown
   var statusCol = headers.indexOf(STATUS_HEADER) + 1;
-  var statusRange = sheet.getRange(2, statusCol, 999, 1);
+  var statusRange = sheet.getRange(2, statusCol, MAX_ROWS, 1);
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(STATUS_OPTIONS, true)
     .setAllowInvalid(false)
@@ -118,7 +120,7 @@ function setupSheet() {
   var rules = [];
 
   // Status conditional formatting
-  var dataRange = sheet.getRange('A2:I1000');
+  var dataRange = sheet.getRange(2, 1, MAX_ROWS, numCols);
 
   // Applied -> green row
   rules.push(SpreadsheetApp.newConditionalFormatRule()
@@ -177,7 +179,7 @@ function setupSheet() {
     .build());
 
   // Tier column colors
-  var tierRange = sheet.getRange('I2:I1000');
+  var tierRange = sheet.getRange(2, numCols, MAX_ROWS, 1);
   rules.push(SpreadsheetApp.newConditionalFormatRule()
     .whenTextContains('Tier 1')
     .setBackground(COLORS.tier1Bg)
@@ -195,29 +197,26 @@ function setupSheet() {
   sheet.setConditionalFormatRules(rules);
 
   // Set default sheet background to dark
-  var fullRange = sheet.getRange(2, 1, 999, numCols);
-  fullRange.setFontFamily('Inter');
-  fullRange.setFontSize(10);
-  fullRange.setVerticalAlignment('middle');
-  sheet.setRowHeightsForced(2, 999, 32);
+  var fullRange = sheet.getRange(2, 1, MAX_ROWS, numCols);
+  fullRange
+    .setFontFamily('Inter')
+    .setFontSize(10)
+    .setVerticalAlignment('middle')
+    .setBackground(COLORS.rowOdd);
 
-  // URL column: make it smaller text, blue
+  // URL column: blue text
   var urlCol = headers.indexOf(COLUMNS.url) + 1;
-  sheet.getRange(2, urlCol, 999, 1)
+  sheet.getRange(2, urlCol, MAX_ROWS, 1)
     .setFontColor('#64b5f6')
     .setFontSize(9);
 
   // Date column formatting
-  sheet.getRange(2, 1, 999, 1)
+  sheet.getRange(2, 1, MAX_ROWS, 1)
     .setHorizontalAlignment('center')
     .setNumberFormat('yyyy-mm-dd');
 
   // Tab color
   sheet.setTabColor('#f59e0b');
-
-  // Set dark background for the whole sheet area
-  ss.getSpreadsheetTheme(); // force theme load
-  fullRange.setBackground(COLORS.rowOdd);
 
   SpreadsheetApp.flush();
   SpreadsheetApp.getUi().alert('Sheet formatted! Dark theme with status colors applied.');
