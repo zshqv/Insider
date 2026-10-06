@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Insider runtime state (dedupe cache, Tier 3 log)
+data/
