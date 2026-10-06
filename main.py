@@ -1,39 +1,41 @@
-import os
+import sys
+import time
 import json
 import argparse
 import requests
-from scraper import JobScraperEngine
+from dotenv import load_dotenv
+from insider.sources import fetch_all
+from insider.filters import build_role_filter, classify_tier, dump_tier3
+from insider.sinks.sheet import SheetClient, SheetError
+from insider.dedupe import SeenStore
+from insider.util import env, redact
 
 def load_config(config_path="config.json"):
     with open(config_path, "r") as f:
         config = json.load(f)
-    
-    discord_url = os.environ.get("DISCORD_WEBHOOK_URL") or config.get("discord_webhook_url")
-    sheet_url = os.environ.get("GOOGLE_SHEET_WEBHOOK") or config.get("google_sheet_webhook")
 
-    if discord_url:
-        discord_url = str(discord_url).strip("[]'\" ")
-    if sheet_url:
-        sheet_url = str(sheet_url).strip("[]'\" ")
-
-    config["discord_webhook_url"] = discord_url
-    config["google_sheet_webhook"] = sheet_url
+    # Secrets come only from the environment (.env locally, repo secrets in Actions).
+    load_dotenv()
+    config["discord_webhook_url"] = env("DISCORD_WEBHOOK_URL")
+    config["google_sheet_webhook"] = env("GOOGLE_SHEET_WEBHOOK")
+    config["sheet_enabled"] = (env("SHEET_ENABLED") or "").lower() == "true"
     return config
 
 def send_to_discord(job, webhook_url):
-    if not webhook_url or "YOUR_DISCORD_WEBHOOK" in webhook_url:
-        print("[!] Discord webhook URL not configured.")
-        return
+    """Returns True only if Discord accepted the message."""
 
-    is_prio = job.get("is_priority", False)
-    color = 0xF59E0B if is_prio else 0x3B82F6
-    badge = "⚡ **HIGH PRIORITY LEAD**" if is_prio else "🌐 **GLOBAL / SECONDARY LEAD**"
+    tier = job.get("tier", 2)
+    color = 0xF59E0B if tier == 1 else 0x3B82F6
+    tier_badge = "⚡ **TIER 1 — MUMBAI / FULLY REMOTE**" if tier == 1 else "🌐 **TIER 2 — INDIA / WORLDWIDE**"
+    ppo = job.get("badge", "")
+    if ppo:
+        tier_badge += f"\n🎓 {ppo}"
     date_posted = job.get("date_posted", "Recently")
-    
+
     embed = {
         "title": f"💼 {job['title']}",
         "description": (
-            f"{badge}\n\n"
+            f"{tier_badge}\n\n"
             f"**Company:** `{job.get('company', 'N/A')}`\n"
             f"**Location:** `{job.get('location', 'N/A')}`\n"
             f"**Date Posted:** `{date_posted}`"
@@ -49,63 +51,124 @@ def send_to_discord(job, webhook_url):
         }
     }
 
-    try:
-        res = requests.post(webhook_url, json={"embeds": [embed]}, timeout=10)
-        res.raise_for_status()
+    for attempt in range(3):
+        try:
+            res = requests.post(webhook_url, json={"embeds": [embed]}, timeout=10)
+            if res.status_code == 429:
+                # Webhooks allow ~5 requests per 2 seconds; wait as long as Discord asks.
+                retry_after = float(res.json().get("retry_after", 2))
+                time.sleep(min(retry_after, 30))
+                continue
+            res.raise_for_status()
+        except Exception as e:
+            print(f"[!] Failed to send job to Discord: {redact(e, webhook_url)}")
+            return False
         print(f"[✔] Discord alert sent for: {job.get('title')}")
-    except Exception as e:
-        print(f"[!] Failed to send job to Discord: {e}")
+        return True
+    print(f"[!] Discord still rate-limiting after retries; will retry next run: {job.get('title')}")
+    return False
 
-def send_to_google_sheet(job, webhook_url):
-    if not webhook_url or "YOUR_GOOGLE_SHEET" in webhook_url or not webhook_url.startswith("http"):
-        print("[!] Google Sheet webhook URL missing or unconfigured.")
-        return
-
-    payload = {
+def to_sheet_lead(job):
+    return {
+        "date_posted": job.get("date_posted"),
         "title": job.get("title"),
         "company": job.get("company"),
         "location": job.get("location"),
         "source": job.get("source"),
         "url": job.get("url"),
         "workplace": job.get("workplace_type"),
-        "date_posted": job.get("date_posted")
+        "tier": _TIER_LABELS.get(job.get("tier"), "Tier 2 🌐"),
     }
 
+def send_to_google_sheet(jobs, webhook_url):
+    """Optional sink: never raises, so a Sheet problem can't fail the run."""
+    if not webhook_url:
+        print("[!] SHEET_ENABLED is true but GOOGLE_SHEET_WEBHOOK is not set; skipping Google Sheet.")
+        return
+    if not jobs:
+        return
+
     try:
-        res = requests.post(
-            webhook_url, 
-            data=json.dumps(payload),
-            headers={"Content-Type": "application/json"},
-            allow_redirects=True,
-            timeout=15
-        )
-        print(f"[*] Google Sheet POST Status: {res.status_code} | Response: {res.text.strip()[:100]}")
-        if res.status_code == 200:
-            print(f"[✔] Successfully logged job to Google Sheet: {job.get('title')}")
-        else:
-            print(f"[!] Sheet POST unexpected status {res.status_code}: {res.text}")
+        results = SheetClient(webhook_url).append([to_sheet_lead(j) for j in jobs])
+    except SheetError as e:
+        print(f"[!] Google Sheet logging FAILED for all {len(jobs)} lead(s): {e}")
+        return
     except Exception as e:
-        print(f"[!] Exception during Google Sheet HTTP POST: {e}")
+        print(f"[!] Google Sheet logging FAILED unexpectedly: {redact(e, webhook_url)}")
+        return
 
-def run_pipeline(once=False):
+    counts = {}
+    for job, result in zip(jobs, results):
+        status = result.get("status")
+        counts[status] = counts.get(status, 0) + 1
+        if status == "error":
+            print(f"[!] Sheet rejected '{job.get('title')}': {result.get('message')}")
+    print(f"[*] Google Sheet: {counts.get('ok', 0)} added, {counts.get('duplicate', 0)} already present, "
+          f"{counts.get('error', 0)} failed.")
+
+_TIER_LABELS = {1: "Tier 1 ⚡", 2: "Tier 2 🌐", 3: "Tier 3 📁"}
+
+
+def run_pipeline(dry_run=False):
     config = load_config()
-    engine = JobScraperEngine(config_path="config.json")
-    
+    filter_fn = build_role_filter(config.get("target_roles", []))
+    seen = SeenStore()
+
     print("[*] Starting Job Ingestion Pipeline Execution...")
-    jobs = engine.run_all()
-    print(f"[*] Scrape complete. Found {len(jobs)} eligible roles.")
+    jobs, counts = fetch_all(filter_fn)
+    source_summary = ", ".join(f"{name}: {n}" for name, n in counts.items())
 
-    processed = jobs[:config.get("max_results_per_run", 30)]
+    for j in jobs:
+        classify_tier(j)
 
-    for job in processed:
-        send_to_discord(job, config["discord_webhook_url"])
-        send_to_google_sheet(job, config["google_sheet_webhook"])
+    tier1 = [j for j in jobs if j.get("tier") == 1]
+    tier2 = [j for j in jobs if j.get("tier") == 2]
+    tier3 = [j for j in jobs if j.get("tier") == 3]
+
+    postable = [j for j in tier1 + tier2 if not seen.is_seen(j)]
+    print(f"[*] Scrape complete. {len(jobs)} eligible ({source_summary}). "
+          f"Tier 1: {len(tier1)}, Tier 2: {len(tier2)}, Tier 3: {len(tier3)} (filed). "
+          f"{len(postable)} new to post ({len(seen)} keys in seen list).")
+
+    if tier3:
+        dump_tier3(tier3)
+
+    processed = postable[:config.get("max_results_per_run", 30)]
+    if len(postable) > len(processed):
+        print(f"[*] Capped at {len(processed)} this run; the other {len(postable) - len(processed)} go out next run.")
+
+    if dry_run:
+        for j in processed:
+            badge = j.get("badge", "")
+            tier_label = _TIER_LABELS.get(j.get("tier"), "")
+            print(f"    [dry-run] [{tier_label}] {j.get('title')} | {j.get('company')} "
+                  f"| {j.get('location')} {badge}")
+        print("[✔] Dry run: nothing posted, seen list not updated.")
+        return
+
+    webhook = config["discord_webhook_url"]
+    if not webhook:
+        print("[!] DISCORD_WEBHOOK_URL not set; nothing posted and seen list not updated.")
+    else:
+        for j in processed:
+            if send_to_discord(j, webhook):
+                seen.mark(j)
+                seen.save()
+        seen.save()
+
+    if config["sheet_enabled"]:
+        send_to_google_sheet(processed, config["google_sheet_webhook"])
+    else:
+        print("[*] Google Sheet sink disabled (set SHEET_ENABLED=true to enable).")
 
     print("[✔] Pipeline execution completed.")
 
 if __name__ == "__main__":
+    # Windows consoles default to cp1252, which can't print the emoji in log lines.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--once", action="store_true", help="Run once and exit (for CI/CD)")
+    parser.add_argument("--once", action="store_true", help="Run once and exit (the only mode; kept for CI/CD compatibility)")
+    parser.add_argument("--dry-run", action="store_true", help="Scrape and print new jobs without posting or updating data/seen.json")
     args = parser.parse_args()
 
-    run_pipeline(once=args.once)
+    run_pipeline(dry_run=args.dry_run)
