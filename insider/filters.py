@@ -66,7 +66,7 @@ def _is_genuinely_remote(location, description):
             return False
 
     if loc_no_remote and not any(
-        ok in loc_no_remote for ok in (cfg.get("tier1_locations", []) + cfg.get("tier2_locations", []))
+        ok in loc_no_remote for ok in (cfg.get("tier1_locations", []) + cfg.get("india_locations", []))
     ):
         if len(loc_no_remote) > 2:
             return False
@@ -74,12 +74,39 @@ def _is_genuinely_remote(location, description):
     return True
 
 
+def _is_india_location(loc, cfg):
+    for place in cfg.get("tier1_locations", []) + cfg.get("india_locations", []):
+        if place.lower() in loc:
+            return True
+    return False
+
+
 def classify_tier(job):
-    """Assign tier (1, 2, or 3) and is_priority flag. Mutates and returns the job dict."""
+    """Assign tier (0=high-priority remote, 1=Mumbai, 2=international, 3=pan-India).
+
+    All tiers are posted to Discord.
+    """
     cfg = _load()
     loc = job.get("location", "").lower()
     title = job.get("title", "").lower()
     desc = job.get("description", "")
+    is_remote = "remote" in f"{title} {loc}"
+
+    if is_remote:
+        if _is_genuinely_remote(job.get("location", ""), desc):
+            job["tier"] = 0
+            job["is_priority"] = True
+            _add_badges(job, title, desc)
+            return job
+        if _is_india_location(loc, cfg):
+            job["tier"] = 0
+            job["is_priority"] = True
+            _add_badges(job, title, desc)
+            return job
+        job["tier"] = 2
+        job["is_priority"] = False
+        _add_badges(job, title, desc)
+        return job
 
     for t1 in cfg.get("tier1_locations", []):
         if t1.lower() in loc:
@@ -88,22 +115,15 @@ def classify_tier(job):
             _add_badges(job, title, desc)
             return job
 
-    if "remote" in f"{title} {loc}".lower():
-        if _is_genuinely_remote(job.get("location", ""), desc):
-            job["tier"] = 1
-            job["is_priority"] = True
-            _add_badges(job, title, desc)
-            return job
+    if _is_india_location(loc, cfg):
+        job["tier"] = 3
+        job["is_priority"] = False
+        _add_badges(job, title, desc)
+        return job
 
-    for t2 in cfg.get("tier2_locations", []):
-        if t2.lower() in loc:
-            job["tier"] = 2
-            job["is_priority"] = False
-            _add_badges(job, title, desc)
-            return job
-
-    job["tier"] = 3
+    job["tier"] = 2
     job["is_priority"] = False
+    _add_badges(job, title, desc)
     return job
 
 

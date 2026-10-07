@@ -119,8 +119,12 @@ max_yoe: 2
 
 tier1_locations:
   - mumbai
+  - vasai
+  - virar
+  - thane
+  - navi mumbai
 
-tier2_locations:
+india_locations:
   - india
   - bangalore
   - bengaluru
@@ -132,7 +136,14 @@ tier2_locations:
   - noida
   - chennai
   - kolkata
-  - worldwide
+  - ahmedabad
+  - jaipur
+  - lucknow
+  - chandigarh
+  - kochi
+  - coimbatore
+  - indore
+  - bhopal
 
 # Phrases in location or description that mean "remote but geo-fenced" -> NOT fully remote.
 remote_geo_fence:

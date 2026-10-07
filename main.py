@@ -5,7 +5,7 @@ import argparse
 import requests
 from dotenv import load_dotenv
 from insider.sources import fetch_all
-from insider.filters import build_role_filter, classify_tier, dump_tier3
+from insider.filters import build_role_filter, classify_tier
 from insider.sinks.sheet import SheetClient, SheetError
 from insider.dedupe import SeenStore
 from insider.util import env, redact
@@ -25,8 +25,15 @@ def send_to_discord(job, webhook_url):
     """Returns True only if Discord accepted the message."""
 
     tier = job.get("tier", 2)
-    color = 0xF59E0B if tier == 1 else 0x3B82F6
-    tier_badge = "⚡ **TIER 1 — MUMBAI / FULLY REMOTE**" if tier == 1 else "🌐 **TIER 2 — INDIA / WORLDWIDE**"
+    _TIER_COLORS = {0: 0x10B981, 1: 0xF59E0B, 2: 0x8B5CF6, 3: 0x3B82F6}
+    _TIER_BADGES = {
+        0: "🚀 **HIGH PRIORITY — REMOTE**",
+        1: "⚡ **TIER 1 — MUMBAI**",
+        2: "🌍 **TIER 2 — INTERNATIONAL**",
+        3: "🇮🇳 **TIER 3 — PAN INDIA**",
+    }
+    color = _TIER_COLORS.get(tier, 0x3B82F6)
+    tier_badge = _TIER_BADGES.get(tier, "🌐 **TIER 2**")
     ppo = job.get("badge", "")
     if ppo:
         tier_badge += f"\n🎓 {ppo}"
@@ -106,7 +113,7 @@ def send_to_google_sheet(jobs, webhook_url):
     print(f"[*] Google Sheet: {counts.get('ok', 0)} added, {counts.get('duplicate', 0)} already present, "
           f"{counts.get('error', 0)} failed.")
 
-_TIER_LABELS = {1: "Tier 1 ⚡", 2: "Tier 2 🌐", 3: "Tier 3 📁"}
+_TIER_LABELS = {0: "Remote 🚀", 1: "Mumbai ⚡", 2: "International 🌍", 3: "Pan India 🇮🇳"}
 
 
 def run_pipeline(dry_run=False):
@@ -121,17 +128,19 @@ def run_pipeline(dry_run=False):
     for j in jobs:
         classify_tier(j)
 
-    tier1 = [j for j in jobs if j.get("tier") == 1]
-    tier2 = [j for j in jobs if j.get("tier") == 2]
-    tier3 = [j for j in jobs if j.get("tier") == 3]
+    by_tier = {}
+    for j in jobs:
+        by_tier.setdefault(j.get("tier"), []).append(j)
 
-    postable = [j for j in tier1 + tier2 if not seen.is_seen(j)]
+    postable = [j for j in jobs if not seen.is_seen(j)]
+    postable.sort(key=lambda j: j.get("tier", 9))
+    tier_summary = ", ".join(
+        f"{_TIER_LABELS.get(t, f'Tier {t}')}: {len(js)}"
+        for t, js in sorted(by_tier.items())
+    )
     print(f"[*] Scrape complete. {len(jobs)} eligible ({source_summary}). "
-          f"Tier 1: {len(tier1)}, Tier 2: {len(tier2)}, Tier 3: {len(tier3)} (filed). "
+          f"{tier_summary}. "
           f"{len(postable)} new to post ({len(seen)} keys in seen list).")
-
-    if tier3:
-        dump_tier3(tier3)
 
     processed = postable[:config.get("max_results_per_run", 30)]
     if len(postable) > len(processed):
@@ -140,7 +149,7 @@ def run_pipeline(dry_run=False):
     if dry_run:
         for j in processed:
             badge = j.get("badge", "")
-            tier_label = _TIER_LABELS.get(j.get("tier"), "")
+            tier_label = _TIER_LABELS.get(j.get("tier"), "?")
             print(f"    [dry-run] [{tier_label}] {j.get('title')} | {j.get('company')} "
                   f"| {j.get('location')} {badge}")
         print("[✔] Dry run: nothing posted, seen list not updated.")
