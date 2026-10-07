@@ -2,7 +2,7 @@ name: Career Intelligence Sourcing Pipeline
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 # Never run two pipelines at once: both would read the same seen.json and double-post.
