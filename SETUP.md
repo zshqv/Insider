@@ -33,8 +33,24 @@ ADZUNA_APP_KEY=your_api_key
 
 | Secret | How to get it |
 |---|---|
-| **Discord webhook** | Open your Discord server → channel settings (gear icon) → Integrations → Webhooks → New Webhook → Copy URL |
+| **Discord webhook** | See step-by-step guide below |
 | **Adzuna API** | Sign up at [developer.adzuna.com](https://developer.adzuna.com/) → Dashboard → your App ID and API Key (free tier: 2,500 calls/month) |
+
+### Creating a Discord webhook (step by step)
+
+1. Open Discord and go to the **server** where you want job alerts
+2. Pick the **channel** you want alerts in (or create a new one like `#job-leads`)
+3. Click the **gear icon** (⚙️) next to the channel name to open Channel Settings
+4. In the left sidebar, click **Integrations**
+5. Click **Webhooks**
+6. Click **New Webhook**
+7. Give it a name (e.g. "Insider Bot") and optionally set an avatar
+8. Click **Copy Webhook URL** — this is your `DISCORD_WEBHOOK_URL`
+9. Paste it in your `.env` file or add it as a GitHub Actions secret
+
+The URL looks like: `https://discord.com/api/webhooks/1234567890/abcdefg...`
+
+> **Tip:** Don't share this URL publicly — anyone with it can post messages to your channel. If it leaks, delete the webhook and create a new one.
 
 ## 3. Customize for your niche
 
