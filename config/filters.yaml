@@ -42,12 +42,21 @@ noise_block:
   - customer service
   - helpdesk
   - sales representative
+  - sales manager
+  - sales associate
+  - sales executive
+  - sales engineer
   - account executive
+  - account manager
   - business development representative
+  - business development executive
+  - business development manager
   - bdr
   - sdr
   - call center
   - technical support
+  - collections
+  - tele
   # Engineering / tech
   - software engineer
   - software developer
