@@ -70,6 +70,7 @@ noise_block:
   - sre
   - site reliability
   - data engineer
+  - data scientist
   - machine learning
   - ml engineer
   - ai engineer
@@ -85,6 +86,19 @@ noise_block:
   - android developer
   - mobile developer
   - web developer
+  - hardware engineer
+  - robotics
+  - electronics engineer
+  - computational
+  - deployment engineer
+  - systems administrator
+  - integration reliability
+  - engineering intern
+  - electronics engineering
+  - mechanical engineer
+  - civil engineer
+  - chemical engineer
+  - technician
   # Design / creative
   - graphic designer
   - ui designer
@@ -99,15 +113,39 @@ noise_block:
   - marketing
   - social media
   - recruiter
+  - recruiting coordinator
   - talent acquisition
   - human resources
   - hr generalist
+  - people operations
   - supply chain
   - logistics
   - warehouse
   - procurement
   - legal counsel
   - paralegal
+  # Non-finance roles that match generic keywords
+  - customer success
+  - community operations
+  - community manager
+  - event coordinator
+  - event manager
+  - office management
+  - office manager
+  - werkstudent
+  - working student
+  - pre-sales
+  - product support
+  - product manager
+  - project engineer
+  - aviation
+  - airworthiness
+  - football agent
+  - sports agent
+  - people analytics
+  - customer experience
+  - sales operations
+  - software engineering
 
 # Max years of experience allowed in title+description (inclusive).
 max_yoe: 2
