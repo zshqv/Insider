@@ -1,6 +1,6 @@
 # Insider
 
-### Say bye-bye to employment and hello to job postings 😭🙏
+### Bye bye unemployment
 
 An automated job-sourcing pipeline that scrapes 7 sources every 30 minutes, filters for the roles you actually want, and delivers leads straight to your Discord and Google Sheets — so you can focus on applying, not searching.
 
