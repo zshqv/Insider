@@ -185,7 +185,7 @@ Edit `.github/workflows/sourcing.yml` to change how often it runs:
 
 ```yaml
 schedule:
-  - cron: '*/30 * * * *'    # Every 30 minutes
+  - cron: '0 * * * *'       # Every hour
   # - cron: '0 */2 * * *'   # Every 2 hours
   # - cron: '0 9,18 * * *'  # Twice daily (9 AM and 6 PM UTC)
 ```
