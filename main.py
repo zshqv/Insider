@@ -133,7 +133,12 @@ def run_pipeline(dry_run=False):
         by_tier.setdefault(j.get("tier"), []).append(j)
 
     postable = [j for j in jobs if not seen.is_seen(j)]
-    postable.sort(key=lambda j: j.get("tier", 9))
+    def _sort_key(j):
+        tier = j.get("tier", 9)
+        date = j.get("date_posted", "0000-00-00")
+        date_inv = "".join(chr(ord("9") - ord(c)) if c.isdigit() else c for c in date)
+        return (tier, date_inv)
+    postable.sort(key=_sort_key)
     tier_summary = ", ".join(
         f"{_TIER_LABELS.get(t, f'Tier {t}')}: {len(js)}"
         for t, js in sorted(by_tier.items())
