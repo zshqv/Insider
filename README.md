@@ -1,6 +1,6 @@
 # Insider
 
-### Say bye-bye to unemployment and hello to job postings 😭🙏
+### Say bye-bye to employment and hello to job postings 😭🙏
 
 An automated job-sourcing pipeline that scrapes 7 sources every 30 minutes, filters for the roles you actually want, and delivers leads straight to your Discord and Google Sheets — so you can focus on applying, not searching.
 
@@ -258,3 +258,7 @@ Keep the same file structure and format as the originals in the repo.
 ## License
 
 MIT © [ashu](./LICENSE)
+
+---
+
+Need help setting this up or have questions? Feel free to reach out at **ashu10tripathi@gmail.com**.
