@@ -152,17 +152,17 @@ Keep the same file structure and format as the originals in the repo.
 
 ## Job boards
 
-| Source | Type | Cost | What it scrapes |
+| Source | Type | Account needed? | What it scrapes |
 |---|---|---|---|
-| Greenhouse | Direct career portal | Free | 34 company boards (Stripe, Razorpay, Coinbase, etc.) |
-| Lever | Direct career portal | Free | 10 company boards |
-| Ashby | Direct career portal | Free | 10 company boards |
-| Remotive | Aggregator | Free | Remote finance/legal jobs |
-| Arbeitnow | Aggregator | Free | EU + global jobs |
-| WeWorkRemotely | Aggregator | Free | Remote finance/legal RSS feed |
-| Adzuna | Aggregator | Free (2,500 calls/mo) | India + GB finance jobs |
+| Greenhouse | Direct career portal | No — public API | 34 company boards (Stripe, Razorpay, Coinbase, etc.) |
+| Lever | Direct career portal | No — public API | 10 company boards |
+| Ashby | Direct career portal | No — public API | 10 company boards |
+| Remotive | Aggregator | No — public API | Remote finance/legal jobs |
+| Arbeitnow | Aggregator | No — public API | EU + global jobs |
+| WeWorkRemotely | Aggregator | No — public RSS | Remote finance/legal feed |
+| Adzuna | Aggregator | Yes — free account ([sign up](https://developer.adzuna.com/)) | India + GB finance jobs (2,500 calls/mo free) |
 
-**Everything is free.** No paid APIs, no premium tiers. Adzuna has a free tier of 2,500 calls/month — at 48 runs/day that's ~1,440 calls/month, well within limits.
+**6 out of 7 sources need zero signup.** Only Adzuna requires a free developer account — and it's optional, the pipeline runs fine without it.
 
 ---
 
