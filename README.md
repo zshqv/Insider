@@ -1,6 +1,6 @@
 # Insider
 
-### Say bye-bye to unemployment and hello to job postings 👋
+### Say bye-bye to unemployment and hello to job postings 😭🙏
 
 An automated job-sourcing pipeline that scrapes 7 sources every 30 minutes, filters for the roles you actually want, and delivers leads straight to your Discord and Google Sheets — so you can focus on applying, not searching.
 
@@ -10,7 +10,7 @@ An automated job-sourcing pipeline that scrapes 7 sources every 30 minutes, filt
 
 ---
 
-## What it looks like
+## Quick peek
 
 ### Discord alerts
 
@@ -61,7 +61,7 @@ Adzuna (IN + GB)        ──┘     Cross-run dedupe        └───→ Al
 | Tier | Badge | Criteria | Example |
 |---|---|---|---|
 | **High Priority** | 🚀 Remote | Genuinely remote — worldwide or India, no western geo-fence | "Remote — Worldwide" |
-| **Tier 1** | ⚡ Mumbai | Mumbai, Vasai, Thane, Navi Mumbai — commutable | "Mumbai, Maharashtra" |
+| **Tier 1** | ⚡ Mumbai | Mumbai — commutable | "Mumbai, Maharashtra" |
 | **Tier 2** | 🌍 International | Global on-site or geo-fenced remote (US, UK, EU) | "London, UK" |
 | **Tier 3** | 🇮🇳 Pan India | Rest of India on-site | "Bangalore, Karnataka" |
 
