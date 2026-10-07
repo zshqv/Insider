@@ -2,7 +2,7 @@
 
 ### Bye bye unemployment
 
-An automated job-sourcing pipeline that scrapes 7 sources every 30 minutes, filters for the roles you actually want, and delivers leads straight to your Discord and Google Sheets — so you can focus on applying, not searching.
+An automated job-sourcing pipeline that scrapes 7 sources every hour, filters for the roles you actually want, and delivers leads straight to your Discord and Google Sheets — so you can focus on applying, not searching.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -28,7 +28,7 @@ All leads are also logged to a Google Sheet with dark theme formatting, status d
 
 ## What is Insider?
 
-Insider is a fully automated job-sourcing pipeline built for people who are tired of manually checking 10 different job boards every day. You configure it once with the roles, seniority, and locations you want — and it runs on GitHub Actions every 30 minutes, for free.
+Insider is a fully automated job-sourcing pipeline built for people who are tired of manually checking 10 different job boards every day. You configure it once with the roles, seniority, and locations you want — and it runs on GitHub Actions every hour, for free.
 
 It scrapes real company career pages (Greenhouse, Lever, Ashby) and aggregators (Remotive, Arbeitnow, WeWorkRemotely, Adzuna), filters out noise, deduplicates across runs so you never see the same job twice, and delivers matching leads to Discord and Google Sheets.
 
@@ -109,7 +109,7 @@ python main.py --once       # real run — posts to Discord + Sheets
 
 ### 5. Automate with GitHub Actions
 
-Add your secrets under **Settings → Secrets and variables → Actions**, and the included workflow runs every 30 minutes automatically.
+Add your secrets under **Settings → Secrets and variables → Actions**, and the included workflow runs every hour automatically.
 
 For the full walkthrough, see **[SETUP.md](./SETUP.md)**.
 
@@ -182,7 +182,7 @@ Keep the same file structure and format as the originals in the repo.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                      GitHub Actions (cron)                       │
-│                       every 30 minutes                          │
+│                       every hour                          │
 └──────────────────────────┬──────────────────────────────────────┘
                            │
                     python main.py --once
