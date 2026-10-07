@@ -148,8 +148,8 @@ python main.py --once
 ```
 
 Check the output:
-- **Tier 1 / Tier 2 jobs** appear in your Discord channel
-- **Tier 3 jobs** (wrong location) are saved to `data/tier3.jsonl`
+- **All tiers** appear in your Discord channel with colour-coded embeds
+- 🚀 Remote, ⚡ Mumbai, 🌍 International, 🇮🇳 Pan India
 
 ## 5. Automate with GitHub Actions
 
@@ -240,4 +240,4 @@ _SOURCES = [
 | `Adzuna: ADZUNA_APP_ID / ADZUNA_APP_KEY not set; skipping` | Add both to `.env` or GitHub Secrets — Adzuna is optional, the other 6 sources still work |
 | `0 new to post` | The dedupe caught them — they were posted in a previous run. Delete `data/seen.json` to reset |
 | Jobs from wrong fields showing up | Add those title keywords to `noise_block` in `config/filters.yaml` |
-| Too few results | Add more company slugs to `config/companies.yaml` or broaden `tier1_locations` / `tier2_locations` |
+| Too few results | Add more company slugs to `config/companies.yaml` or broaden `tier1_locations` / `india_locations` |
