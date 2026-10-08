@@ -237,12 +237,73 @@ def run_pipeline(dry_run=False):
 
     print("[✔] Pipeline execution completed.")
 
+def run_explain(title, desc):
+    """Run the production filter path on a single title and print the trace."""
+    from insider.filters import explain_filter
+    config = load_config()
+    target_roles = config.get("target_roles", [])
+
+    print(f"Title: {title}")
+    if desc:
+        print(f"Description: {desc[:200]}{'...' if len(desc) > 200 else ''}")
+    print()
+
+    trace, verdict = explain_filter(title, desc, target_roles)
+    for step, detail, result in trace:
+        tag = f" -> {result}" if result else ""
+        print(f"  [{step}] {detail}{tag}")
+
+    print(f"\n  VERDICT: {'PASS' if verdict else 'BLOCKED'}")
+    return verdict
+
+
+def run_audit():
+    """Load seen.json, re-run every title through the current filter, list newly-blocked ones."""
+    from insider.dedupe import SeenStore, DEFAULT_PATH
+    config = load_config()
+    filter_fn = build_role_filter(config.get("target_roles", []))
+
+    if not os.path.exists(DEFAULT_PATH):
+        print("[!] No data/seen.json found — nothing to audit.")
+        return
+
+    seen = SeenStore()
+    blocked = []
+    for key in sorted(seen.seen.keys()):
+        if not key.startswith("url:"):
+            continue
+        # Extract a pseudo-title from the URL slug
+        parts = key.split("/")
+        slug = parts[-1] if parts else key
+        slug = slug.replace("-", " ").replace("_", " ")
+        if not filter_fn(slug, ""):
+            blocked.append((key, slug))
+
+    if not blocked:
+        print(f"[✔] All {len(seen)} seen keys still pass the filter.")
+        return
+
+    print(f"[!] {len(blocked)} seen key(s) would now be blocked:\n")
+    for key, slug in blocked:
+        print(f"  BLOCKED: {slug}")
+        print(f"    key: {key}")
+    print(f"\n  Total: {len(blocked)} out of {len(seen)} keys")
+
+
 if __name__ == "__main__":
     # Windows consoles default to cp1252, which can't print the emoji in log lines.
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true", help="Run once and exit (the only mode; kept for CI/CD compatibility)")
     parser.add_argument("--dry-run", action="store_true", help="Scrape and print new jobs without posting or updating data/seen.json")
+    parser.add_argument("--explain", type=str, help="Trace filter logic on a single title")
+    parser.add_argument("--desc", type=str, default="", help="Description text for --explain")
+    parser.add_argument("--audit", action="store_true", help="Re-run seen titles through current filter, list newly blocked")
     args = parser.parse_args()
 
-    run_pipeline(dry_run=args.dry_run)
+    if args.explain:
+        run_explain(args.explain, args.desc)
+    elif args.audit:
+        run_audit()
+    else:
+        run_pipeline(dry_run=args.dry_run)

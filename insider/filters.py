@@ -52,6 +52,63 @@ def build_role_filter(target_roles):
     return passes
 
 
+def explain_filter(title, description, target_roles):
+    """Trace the exact production filter path and return a list of (step, detail, result) tuples."""
+    cfg = _load()
+    roles = [r.lower() for r in target_roles]
+    block_re = _word_pattern(cfg["seniority_block"])
+    noise_re = _word_pattern(cfg["noise_block"])
+    max_yoe = cfg.get("max_yoe", 2)
+    high_yoe_re = re.compile(
+        rf"\b({max_yoe + 1}|[{max_yoe + 1}-9]|\d{{2,}})\+?\s*(years?|yrs?|yoe)\b", re.IGNORECASE
+    )
+    finance_override_re = re.compile(
+        r"\b(?:data|automation|analyst|analytics|operations|finance|business)\b", re.IGNORECASE
+    )
+
+    t = title.lower()
+    text = f"{title} {description}".lower()
+    trace = []
+
+    trace.append(("Normalized title", t, None))
+
+    # Seniority block
+    m = block_re.search(t)
+    if m:
+        trace.append(("Seniority block", f"MATCHED '{m.group()}' at pos {m.start()}", "BLOCKED"))
+        return trace, False
+    trace.append(("Seniority block", "no match", "passed"))
+
+    # Noise block
+    m = noise_re.search(t)
+    if m:
+        trace.append(("Noise block", f"MATCHED '{m.group()}' at pos {m.start()}", "HIT"))
+        # Finance override check
+        override = finance_override_re.search(t)
+        if override:
+            trace.append(("Finance override", f"MATCHED '{override.group()}' — noise block OVERRIDDEN", "OVERRIDE"))
+        else:
+            trace.append(("Finance override", "no match — noise block stands", "BLOCKED"))
+            return trace, False
+    else:
+        trace.append(("Noise block", "no match", "passed"))
+
+    # YOE
+    m = high_yoe_re.search(text)
+    if m:
+        trace.append(("YOE cap", f"MATCHED '{m.group()}' — too senior", "BLOCKED"))
+        return trace, False
+    trace.append(("YOE cap", "no match", "passed"))
+
+    # Positive role match
+    matched = [r for r in roles if r in t]
+    if matched:
+        trace.append(("Role match", f"MATCHED roles: {matched}", "PASS"))
+        return trace, True
+    trace.append(("Role match", f"no target role found in title", "BLOCKED"))
+    return trace, False
+
+
 def _is_genuinely_remote(location, description):
     """True only if the job is fully remote with no geo-fence."""
     cfg = _load()
