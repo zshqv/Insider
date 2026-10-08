@@ -31,6 +31,7 @@ def fetch(filter_fn):
                     workplace=detect_workplace(title, loc, content),
                     is_priority=False,
                     date_posted=date_posted,
+                    description=content,
                 ))
         except Exception as e:
             print(f"[!] Greenhouse fetch failed for {token}: {e}")

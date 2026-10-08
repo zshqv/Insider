@@ -35,6 +35,7 @@ def fetch(filter_fn):
                     workplace=detect_workplace(title, loc, desc),
                     is_priority=False,
                     date_posted=date_posted,
+                    description=desc,
                 ))
         except Exception as e:
             print(f"[!] Lever fetch failed for {slug}: {e}")

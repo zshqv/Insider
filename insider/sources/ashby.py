@@ -16,7 +16,9 @@ def fetch(filter_fn):
                 loc = item.get("location", "Various")
                 date_posted = format_date(item.get("publishedAt"))
 
-                if not filter_fn(title, "") or not within_recency(date_posted):
+                desc = item.get("descriptionPlain", "") or item.get("description", "")
+
+                if not filter_fn(title, desc) or not within_recency(date_posted):
                     continue
 
                 apply_url = item.get("jobUrl", f"https://jobs.ashbyhq.com/{slug}/{item.get('id', '')}")
@@ -29,9 +31,10 @@ def fetch(filter_fn):
                     source=f"Ashby ({slug.replace('-', ' ').title()})",
                     job_id=item.get("id"),
                     source_type="Direct Career Portal 🎯",
-                    workplace=detect_workplace(title, loc),
+                    workplace=detect_workplace(title, loc, desc),
                     is_priority=False,
                     date_posted=date_posted,
+                    description=desc,
                 ))
         except Exception as e:
             print(f"[!] Ashby fetch failed for {slug}: {e}")

@@ -17,15 +17,18 @@ def load_companies():
 
 
 def format_date(raw):
+    """Parse an ISO-ish date string to YYYY-MM-DD. Returns '' if unparseable."""
     if not raw:
-        return datetime.now().strftime("%Y-%m-%d")
+        return ""
     try:
-        return raw.split("T")[0]
+        return str(raw).split("T")[0]
     except Exception:
-        return datetime.now().strftime("%Y-%m-%d")
+        return ""
 
 
 def within_recency(date_str, max_days=30):
+    if not date_str:
+        return True
     try:
         posted = datetime.strptime(date_str, "%Y-%m-%d")
         return posted >= datetime.now() - timedelta(days=max_days)
@@ -42,7 +45,7 @@ def detect_workplace(title, location, description=""):
     return "On-site 🏢"
 
 
-def job(*, title, company, location, url, source, job_id, source_type, workplace, is_priority, date_posted):
+def job(*, title, company, location, url, source, job_id, source_type, workplace, is_priority, date_posted, description="", date_found=None):
     """Build a normalised job dict."""
     return {
         "title": title,
@@ -55,4 +58,6 @@ def job(*, title, company, location, url, source, job_id, source_type, workplace
         "workplace_type": workplace,
         "is_priority": is_priority,
         "date_posted": date_posted,
+        "description": description,
+        "date_found": date_found or datetime.now().strftime("%Y-%m-%d"),
     }

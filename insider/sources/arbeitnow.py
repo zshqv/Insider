@@ -12,7 +12,12 @@ def fetch(filter_fn):
             title = item.get("title", "")
             loc = item.get("location", "")
             desc = item.get("description", "")
-            date_posted = format_date(item.get("created_at"))
+            raw_date = item.get("created_at")
+            if isinstance(raw_date, (int, float)) and raw_date > 1_000_000_000:
+                from datetime import datetime
+                date_posted = datetime.utcfromtimestamp(raw_date).strftime("%Y-%m-%d")
+            else:
+                date_posted = format_date(raw_date)
 
             if not filter_fn(title, desc) or not within_recency(date_posted):
                 continue
@@ -28,6 +33,7 @@ def fetch(filter_fn):
                 workplace="Remote 🌐" if item.get("remote") else "On-site 🏢",
                 is_priority=False,
                 date_posted=date_posted,
+                description=desc,
             ))
     except Exception as e:
         print(f"[!] Arbeitnow fetch failed: {e}")

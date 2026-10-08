@@ -51,6 +51,7 @@ def fetch(filter_fn):
                         workplace="Remote 🌐" if "remote" in f"{title} {loc}".lower() else "On-site 🏢",
                         is_priority=False,
                         date_posted=date_posted,
+                        description=desc,
                     ))
             except Exception as e:
                 print(f"[!] Adzuna {country}/{category} fetch failed: {e}")
