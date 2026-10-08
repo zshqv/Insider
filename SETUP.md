@@ -52,9 +52,26 @@ The URL looks like: `https://discord.com/api/webhooks/1234567890/abcdefg...`
 
 > **Tip:** Don't share this URL publicly — anyone with it can post messages to your channel. If it leaks, delete the webhook and create a new one.
 
-## 3. Customize for your niche
+## 3. Set your candidate profile
 
-Insider ships configured for entry-level finance roles in India. To adapt it to your own job search, edit these three files:
+Edit `config/filters.yaml` under the `candidate:` block to match your situation:
+
+```yaml
+candidate:
+  german_level: A1            # A1-C2 or "none"
+  enrolled_student: false
+  needs_visa_sponsorship: true
+  based_in: India
+  accepts_onsite_in:
+    - India
+  german_posting_assumes_german_required: true
+```
+
+This drives the gate detection — German requirement, enrollment, visa, and location eligibility checks run against these values. See the README for what each gate does.
+
+## 4. Customize for your niche
+
+Insider ships configured for entry-level finance roles in India. To adapt it to your own job search, edit these files:
 
 ### `config.json` — target roles
 
@@ -73,51 +90,15 @@ Change the keywords that match against job titles:
 }
 ```
 
-### `config/filters.yaml` — seniority and location rules
+### `config/filters.yaml` — seniority, noise, and location rules
 
-**Seniority** — edit `seniority_block` to control which levels are filtered out:
+**Seniority** — edit `seniority_block` to control which levels are filtered out.
 
-```yaml
-seniority_block:
-  - senior
-  - staff
-  - principal
-  - director
-  # Remove "manager" if you want manager roles
-```
+**Noise** — edit `noise_block` to remove non-relevant titles. The noise block takes precedence over intern/graduate overrides, EXCEPT when the title also contains data, automation, analyst, analytics, operations, finance, or business.
 
-**Noise** — edit `noise_block` to remove non-relevant titles. If you're targeting engineering, remove the engineering entries and add finance/marketing/etc. instead:
+**Location tiers** — edit to match where you want to work.
 
-```yaml
-noise_block:
-  - financial analyst
-  - accountant
-  - bookkeeper
-  # Add whatever is noise for YOUR search
-```
-
-**Location tiers** — edit to match where you want to work:
-
-```yaml
-tier1_locations:
-  - san francisco
-  - new york
-
-tier2_locations:
-  - seattle
-  - austin
-  - boston
-  - worldwide
-```
-
-**Remote geo-fence** — controls which "remote" jobs are accepted. Remove countries you'd accept remote work from:
-
-```yaml
-remote_region_block:
-  - uk
-  - germany
-  # Remove "us" if you're US-based and want US-remote roles
-```
+**Fit rules** — `post_fit_c: false` means Fit C leads (multiple gate failures or no role match) won't be posted to Discord but will still appear in the Google Sheet.
 
 ### `config/companies.yaml` — company boards
 
@@ -126,21 +107,6 @@ Add or remove Greenhouse/Lever/Ashby board slugs. The slug is the company identi
 - **Greenhouse**: `https://boards.greenhouse.io/SLUG` → use `SLUG`
 - **Lever**: `https://jobs.lever.co/SLUG` → use `SLUG`
 - **Ashby**: `https://jobs.ashbyhq.com/SLUG` → use `SLUG`
-
-```yaml
-greenhouse:
-  - google
-  - meta
-  - netflix
-
-lever:
-  - figma
-  - notion
-
-ashby:
-  - linear
-  - vercel
-```
 
 ### Adzuna categories and countries
 
@@ -151,23 +117,57 @@ CATEGORIES = ["it-jobs"]           # was "accounting-finance-jobs"
 COUNTRIES = ["us", "gb", "de"]     # add/remove country codes
 ```
 
-Available categories: `it-jobs`, `engineering-jobs`, `marketing-jobs`, `healthcare-nursing-jobs`, etc. Country codes: `us`, `gb`, `in`, `de`, `fr`, `au`, `ca`, etc.
-
-## 4. Test locally
+## 5. Test locally
 
 ```bash
-# Dry run — scrapes and prints, no Discord posting
+# Dry run — scrapes and prints with fit/gate info, no Discord posting
 python main.py --dry-run
+
+# Run tests
+python -m pytest tests/ -v
 
 # Real run — posts to Discord
 python main.py --once
 ```
 
-Check the output:
-- **All tiers** appear in your Discord channel with colour-coded embeds
-- 🚀 Remote, ⚡ Mumbai, 🌍 International, 🇮🇳 Pan India
+## 6. Set up Google Sheets (optional)
 
-## 5. Automate with GitHub Actions
+1. Create a new Google Sheet
+2. Open **Extensions → Apps Script**
+3. Paste the contents of `apps_script/Code.gs`
+4. Run `setupSheet()` from the Apps Script editor (it will ask for permissions)
+5. Deploy: **Deploy → New deployment → Web app → Execute as: Me, Who has access: Anyone**
+6. Copy the deployment URL (ends in `/exec`) — this is your `GOOGLE_SHEET_WEBHOOK`
+7. Add it to `.env` (local) or GitHub Secrets (Actions)
+8. Set `SHEET_ENABLED=true`
+
+### New columns
+
+The sheet now includes gate and tracking columns. Run **Insider → Ensure Schema** from the sheet menu (or call the web app with a GET request) to add any missing columns.
+
+New pipeline columns: Fit, Gate Pass, German Req, Enrollment Req, Visa, Gate Fail Reasons, Date Found.
+
+New tracking columns (you fill these): Date Applied, Follow-up Date, Skip Reason, Contact, Messaged On, Replied?, Notes, Duplicate Flag.
+
+Status options: New, Skipped, Applied, Replied, Interview, Offer, Rejected, Ghosted.
+
+### Auto-fill behavior
+
+- When you set Status to **Applied**, Date Applied and Follow-up Date (+ 7 days) are auto-filled
+- Rows stay **Applied** for 21+ days with no reply → auto-marked **Ghosted** (run **Insider → Mark Ghosted** or let the script handle it)
+
+### Migrating an existing sheet
+
+If you already have an older Insider sheet:
+
+```bash
+python scripts/migrate_sheet.py --dry-run   # preview changes
+python scripts/migrate_sheet.py             # apply changes
+```
+
+This adds missing columns without touching existing data. Blank Status cells are set to "New". Existing "Rejected" rows are not changed.
+
+## 7. Automate with GitHub Actions
 
 ### Add secrets to your fork
 
@@ -178,6 +178,9 @@ Go to your repo → **Settings** → **Secrets and variables** → **Actions** �
 | `DISCORD_WEBHOOK_URL` | Your Discord webhook URL |
 | `ADZUNA_APP_ID` | Your Adzuna App ID |
 | `ADZUNA_APP_KEY` | Your Adzuna API Key |
+| `GOOGLE_SHEET_WEBHOOK` | Your Apps Script deployment URL |
+
+Set `SHEET_ENABLED=true` as a **repository variable** (not secret) if you want Sheets enabled.
 
 ### Adjust the schedule
 
@@ -185,7 +188,7 @@ Edit `.github/workflows/sourcing.yml` to change how often it runs:
 
 ```yaml
 schedule:
-  - cron: '0 * * * *'       # Every hour
+  - cron: '0 * * * *'       # Every hour (default)
   # - cron: '0 */2 * * *'   # Every 2 hours
   # - cron: '0 9,18 * * *'  # Twice daily (9 AM and 6 PM UTC)
 ```
@@ -195,56 +198,6 @@ schedule:
 Go to your fork → **Actions** tab → click **"I understand my workflows, go ahead and enable them"**.
 
 The pipeline will now run automatically on your schedule.
-
-## 6. Add a new source (optional)
-
-Create `insider/sources/yoursite.py`:
-
-```python
-import requests
-from insider.sources._common import format_date, within_recency, job
-
-
-def fetch(filter_fn):
-    jobs = []
-    try:
-        res = requests.get("https://api.example.com/jobs", timeout=10)
-        if res.status_code != 200:
-            return jobs
-        for item in res.json().get("results", []):
-            title = item.get("title", "")
-            desc = item.get("description", "")
-
-            if not filter_fn(title, desc) or not within_recency(format_date(item.get("date"))):
-                continue
-
-            jobs.append(job(
-                title=title,
-                company=item.get("company", "Unknown"),
-                location=item.get("location", "Various"),
-                url=item.get("url"),
-                source="YourSite",
-                job_id=item.get("id"),
-                source_type="Aggregator 📦",
-                workplace="Remote 🌐",
-                is_priority=False,
-                date_posted=format_date(item.get("date")),
-            ))
-    except Exception as e:
-        print(f"[!] YourSite fetch failed: {e}")
-    return jobs
-```
-
-Then register it in `insider/sources/__init__.py`:
-
-```python
-from insider.sources.yoursite import fetch as _yoursite
-
-_SOURCES = [
-    # ... existing sources ...
-    ("YourSite", _yoursite),
-]
-```
 
 ---
 
@@ -257,3 +210,5 @@ _SOURCES = [
 | `0 new to post` | The dedupe caught them — they were posted in a previous run. Delete `data/seen.json` to reset |
 | Jobs from wrong fields showing up | Add those title keywords to `noise_block` in `config/filters.yaml` |
 | Too few results | Add more company slugs to `config/companies.yaml` or broaden `tier1_locations` / `india_locations` |
+| Sheet version mismatch | Paste the latest `apps_script/Code.gs` into the editor and deploy a **new version** |
+| Gate results all Unknown | Make sure sources are returning descriptions — check the source API responses |

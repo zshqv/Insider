@@ -1,8 +1,6 @@
 # Insider
 
-### Bye bye unemployment
-
-An automated job-sourcing pipeline that scrapes 7 sources every hour, filters for the roles you actually want, and delivers leads straight to your Discord and Google Sheets — so you can focus on applying, not searching.
+An automated job-sourcing pipeline that scrapes 7 sources every hour, filters for entry-level roles, gates on eligibility (German, visa, enrollment, location), and delivers leads to Discord and Google Sheets.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -14,45 +12,85 @@ An automated job-sourcing pipeline that scrapes 7 sources every hour, filters fo
 
 ### Discord alerts
 
-Every new lead lands in your Discord channel with a tier badge, company, location, and a direct apply link.
+Every new lead lands in your Discord channel with a tier badge, fit grade, gate status, and a direct apply link.
 
 ![Discord embed](assets/discord-embed.png)
 
 ### Google Sheets tracker
 
-All leads are also logged to a Google Sheet with dark theme formatting, status dropdowns (Applied / Interviewing / Offered / Rejected / Ghosted), and auto-ghosting after 3 weeks of no activity.
+All leads are logged to a Google Sheet with dark theme formatting, status dropdowns, gate columns, fit grades, follow-up tracking, and auto-ghosting after 3 weeks of no activity.
 
 ![Google Sheet tracker](assets/google-sheet.png)
-
----
-
-## What is Insider?
-
-Insider is a fully automated job-sourcing pipeline built for people who are tired of manually checking 10 different job boards every day. You configure it once with the roles, seniority, and locations you want — and it runs on GitHub Actions every hour, for free.
-
-It scrapes real company career pages (Greenhouse, Lever, Ashby) and aggregators (Remotive, Arbeitnow, WeWorkRemotely, Adzuna), filters out noise, deduplicates across runs so you never see the same job twice, and delivers matching leads to Discord and Google Sheets.
 
 ---
 
 ## How it works
 
 1. **Scrape** — Fetches jobs from 7 sources (54+ company boards + 4 aggregators)
-2. **Filter** — Matches against your target roles, blocks senior/noise titles, enforces a YOE cap (≤ 2 years)
+2. **Filter** — Matches against your target roles, blocks senior/noise titles, enforces a YOE cap
 3. **Classify** — Assigns a priority tier based on location
-4. **Dedupe** — Checks against `data/seen.json` so you never get the same job twice
-5. **Deliver** — Posts new leads to Discord with tier-coded embeds, logs them to Google Sheets
+4. **Gate** — Checks German requirement, enrollment, visa sponsorship, and location eligibility
+5. **Grade** — Assigns Fit A/B/C based on gate results and role match
+6. **Dedupe** — Checks against `data/seen.json` so you never get the same job twice
+7. **Deliver** — Posts new leads to Discord (Fit A and B by default), logs all to Google Sheets
 
 ```
-Sources (7)                     Filters                        Sinks
-───────────                     ───────                        ─────
+Sources (7)                     Pipeline                       Sinks
+───────────                     ────────                       ─────
 Greenhouse (34 boards)  ──┐     Role keyword match      ┌───→ Discord
-Lever (10 boards)       ──┤     Seniority block         │     tier-coded embeds
-Ashby (10 boards)       ──┤     Noise exclusion         │
-Remotive                ──┼──→  YOE cap (≤ 2)       ──→ ├───→ Google Sheets (optional)
-Arbeitnow               ──┤     Geo-fence detection     │     auto-updating tracker
-WeWorkRemotely          ──┤     Tier classification     │
-Adzuna (IN + GB)        ──┘     Cross-run dedupe        └───→ All tiers posted
+Lever (10 boards)       ──┤     Seniority block         │     fit/gate-coded embeds
+Ashby (10 boards)       ──┤     Noise exclusion         │     (Fit C skipped by default)
+Remotive                ──┼──→  YOE cap (≤ 2)       ──→ │
+Arbeitnow               ──┤     Tier classification     ├───→ Google Sheets (optional)
+WeWorkRemotely          ──┤     Gate detection          │     status tracking, follow-ups
+Adzuna (IN + GB)        ──┘     Fit grading (A/B/C)     │     duplicate flagging
+                                Cross-run dedupe        └───→ All tiers + fits logged
 ```
+
+---
+
+## Candidate config and gates
+
+Set your profile in `config/filters.yaml` under the `candidate:` block:
+
+```yaml
+candidate:
+  german_level: A1            # A1-C2 or "none"
+  enrolled_student: false
+  needs_visa_sponsorship: true
+  based_in: India
+  accepts_onsite_in:
+    - India
+  german_posting_assumes_german_required: true
+```
+
+### Gate checks
+
+| Gate | What it checks | Pass | Fail |
+|---|---|---|---|
+| **German** | Parses explicit levels (B2, C1) and phrases ("fließend", "fluent German"). Soft markers ("von Vorteil", "nice to have") don't fail. German-language postings auto-fail if your level can't cover it. | Your level meets the requirement, or it's soft | Hard requirement exceeds your level |
+| **Enrollment** | Detects Werkstudent, working student, Pflichtpraktikum, "currently enrolled" | You're enrolled, or no enrollment needed | Requires enrollment and you're not enrolled |
+| **Visa** | Looks for "no sponsorship", "must have right to work" vs "visa sponsorship available", "relocation" | Sponsorship offered, or you don't need it | No sponsorship and you need it |
+| **Location** | Reuses the tier system; remote = Pass, on-site in your accepted locations = Pass | Remote or in your accepted locations | On-site abroad without relocation offered |
+
+### Fit grades
+
+| Grade | Meaning |
+|---|---|
+| **A** | All gates pass + title matches your target roles |
+| **B** | Exactly one gate fails + title matches, or any gate is Unknown |
+| **C** | Everything else (multiple fails or no role match) |
+
+### Worked example
+
+**Job:** "Junior Financial Analyst" at Stripe, Remote — Worldwide.
+Description mentions "visa sponsorship available", no German requirement, not a student role.
+
+- German gate: Pass (no requirement found)
+- Enrollment gate: Pass (no student keywords)
+- Visa gate: Pass ("visa sponsorship available")
+- Location gate: Pass (tier 0, genuinely remote)
+- **Gate Pass: Pass** → **Fit: A** (all gates pass + "analyst" matches target roles)
 
 ---
 
@@ -60,12 +98,43 @@ Adzuna (IN + GB)        ──┘     Cross-run dedupe        └───→ Al
 
 | Tier | Badge | Criteria | Example |
 |---|---|---|---|
-| **High Priority** | 🚀 Remote | Genuinely remote — worldwide or India, no western geo-fence | "Remote — Worldwide" |
-| **Tier 1** | ⚡ Mumbai | Mumbai — commutable | "Mumbai, Maharashtra" |
-| **Tier 2** | 🌍 International | Global on-site or geo-fenced remote (US, UK, EU) | "London, UK" |
-| **Tier 3** | 🇮🇳 Pan India | Rest of India on-site | "Bangalore, Karnataka" |
+| **High Priority** | Remote | Genuinely remote — worldwide or India, no western geo-fence | "Remote — Worldwide" |
+| **Tier 1** | Mumbai | Mumbai — commutable | "Mumbai, Maharashtra" |
+| **Tier 2** | International | Global on-site or geo-fenced remote (US, UK, EU) | "London, UK" |
+| **Tier 3** | Pan India | Rest of India on-site | "Bangalore, Karnataka" |
 
-Internships with conversion/PPO signals get a 🎓 badge.
+Internships with conversion/PPO signals get a badge.
+
+---
+
+## Sheet columns
+
+| Column | Source | Description |
+|---|---|---|
+| Date Posted | API | Real posted date from source (blank if unavailable) |
+| Title | API | Job title |
+| Company | API | Company name |
+| Location | API | Location string |
+| Source | Pipeline | Which source found it |
+| URL | API | Apply link (displayed as "Open" hyperlink) |
+| Workplace | Pipeline | Remote / Hybrid / On-site |
+| Tier | Pipeline | Location tier |
+| Fit | Pipeline | A / B / C grade |
+| Gate Pass | Pipeline | Pass / Fail / Unknown |
+| German Req | Pipeline | Required German level (if any) |
+| Enrollment Req | Pipeline | Yes / No / Unknown |
+| Visa | Pipeline | Yes / No / Unknown |
+| Gate Fail Reasons | Pipeline | Short explanation of failures |
+| Date Found | Pipeline | When the pipeline first saw this job |
+| Status | You | New / Skipped / Applied / Replied / Interview / Offer / Rejected / Ghosted |
+| Date Applied | Auto/You | Auto-filled when Status → Applied |
+| Follow-up Date | Auto | Date Applied + 7 days |
+| Skip Reason | You | Why you skipped this lead |
+| Contact | You | LinkedIn URL of recruiter/hiring manager |
+| Messaged On | You | Date you messaged the contact |
+| Replied? | You | Whether they replied |
+| Notes | You | Free-form notes |
+| Duplicate Flag | Pipeline | "Same role as row N" or "Same company: N roles" |
 
 ---
 
@@ -94,10 +163,10 @@ cp .env.example .env       # fill in your keys
 
 ### 3. Customize for your search
 
-Edit these three files — no code changes needed:
+Edit these files — no code changes needed:
 
 - **`config.json`** — target role keywords (what job titles to match)
-- **`config/filters.yaml`** — seniority rules, noise exclusions, location tiers
+- **`config/filters.yaml`** — seniority rules, noise exclusions, location tiers, candidate profile, fit rules
 - **`config/companies.yaml`** — Greenhouse/Lever/Ashby board slugs
 
 ### 4. Run
@@ -124,8 +193,9 @@ Don't have Claude Code? Copy this prompt into any AI assistant (Claude, ChatGPT,
 
 ```
 I forked the Insider job-sourcing pipeline (https://github.com/zshqv/Insider).
-It scrapes 7 job board APIs, filters by role/seniority/location, and posts
-matching jobs to Discord.
+It scrapes 7 job board APIs, filters by role/seniority/location, gates on
+eligibility (German, visa, enrollment, location), and posts matching jobs
+to Discord.
 
 Help me customise it for my job search. Here's what I'm looking for:
 
@@ -134,16 +204,17 @@ Help me customise it for my job search. Here's what I'm looking for:
 - Locations I want (Tier 1 priority): [e.g. "San Francisco", "New York"]
 - Other acceptable locations (Tier 2): [e.g. "Seattle", "Austin", "Remote US"]
 - Industries/fields to EXCLUDE from results: [e.g. "finance", "healthcare"]
+- German level: [e.g. "none", "B1", "C1"]
+- Enrolled student: [yes/no]
+- Need visa sponsorship: [yes/no]
+- Based in: [country]
 
 Based on this, generate:
 1. An updated config.json with my target roles
-2. An updated config/filters.yaml with my seniority rules, noise exclusions,
-   and location tiers
+2. An updated config/filters.yaml with my candidate profile, seniority rules,
+   noise exclusions, and location tiers
 3. An updated config/companies.yaml with relevant company board slugs
-   (Greenhouse/Lever/Ashby) for my target industry
 4. Any changes needed in insider/sources/adzuna.py (categories and countries)
-
-Keep the same file structure and format as the originals in the repo.
 ```
 
 </details>
@@ -170,9 +241,9 @@ Keep the same file structure and format as the originals in the repo.
 
 | What | When |
 |---|---|
-| Pipeline runs | Every 30 minutes via GitHub Actions cron |
+| Pipeline runs | Every hour via GitHub Actions cron |
 | Dedupe retention | 180 days (seen jobs auto-expire) |
-| Auto-ghost (Sheets) | 3 weeks with no status update → marked Ghosted |
+| Auto-ghost (Sheets) | 21 days after Date Applied with no reply → marked Ghosted |
 | Recency window | Last 30 days (older job postings are skipped) |
 
 ---
@@ -182,7 +253,7 @@ Keep the same file structure and format as the originals in the repo.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                      GitHub Actions (cron)                       │
-│                       every hour                          │
+│                         every hour                               │
 └──────────────────────────┬──────────────────────────────────────┘
                            │
                     python main.py --once
@@ -205,10 +276,21 @@ Keep the same file structure and format as the originals in the repo.
           │     insider/filters.py           │
           │                                 │
           │  1. Role keyword match           │
-          │  2. Seniority block (sr, mgr..)  │
-          │  3. Noise block (eng, design..)  │
+          │  2. Seniority block              │
+          │  3. Noise block (+ override)     │
           │  4. YOE cap (≤ 2 years)          │
           │  5. Tier classification           │
+          └────────────────┬────────────────┘
+                           │
+          ┌────────────────▼────────────────┐
+          │         Gate Detection           │
+          │     insider/gates.py             │
+          │                                 │
+          │  1. German requirement           │
+          │  2. Enrollment required           │
+          │  3. Visa sponsorship             │
+          │  4. Location eligibility          │
+          │  5. Fit grading (A/B/C)          │
           └────────────────┬────────────────┘
                            │
           ┌────────────────▼────────────────┐
@@ -225,9 +307,11 @@ Keep the same file structure and format as the originals in the repo.
     ┌─────────▼─────────┐    ┌─────────▼─────────┐
     │    Discord Sink    │    │  Google Sheets     │
     │                    │    │  (optional)        │
-    │  Tier-coded embeds │    │  Apps Script       │
-    │  Rate-limit aware  │    │  webhook receiver  │
-    │  3 retries         │    │  Status dropdowns  │
+    │  Fit/gate-coded    │    │  Apps Script v4    │
+    │  embeds            │    │  Gate columns      │
+    │  Fit C skipped     │    │  Status tracking   │
+    │  (configurable)    │    │  Follow-up dates   │
+    │  Rate-limit aware  │    │  Duplicate flags   │
     └────────────────────┘    └────────────────────┘
 ```
 
@@ -240,14 +324,17 @@ Keep the same file structure and format as the originals in the repo.
 ├── config.json                Target roles, locations, limits
 ├── config/
 │   ├── companies.yaml         Company boards (Greenhouse/Lever/Ashby slugs)
-│   └── filters.yaml           Seniority rules, tiers, geo-fence, badges
+│   └── filters.yaml           Seniority rules, tiers, candidate profile, fit rules
 ├── insider/
 │   ├── sources/               One module per source (7 total)
 │   ├── filters.py             Role filter + tier classifier
+│   ├── gates.py               Gate detection + fit grading
 │   ├── dedupe.py              Cross-run deduplication (data/seen.json)
 │   ├── sinks/sheet.py         Google Sheets sink
 │   └── util.py                Env helpers, secret redaction
-├── apps_script/Code.gs        Google Sheets webhook receiver
+├── apps_script/Code.gs        Google Sheets webhook receiver (v4)
+├── scripts/migrate_sheet.py   One-time sheet migration
+├── tests/                     pytest test suite
 ├── assets/                    Screenshots for README
 ├── .env.example               Template for local secrets
 └── .github/workflows/         GitHub Actions cron
@@ -261,4 +348,4 @@ MIT © [ashu](./LICENSE)
 
 ---
 
-Need help setting this up or have questions? Feel free to reach out at **ashu10tripathi@gmail.com**.
+Need help setting this up or have questions? Open an issue or email `YOUR_EMAIL`.

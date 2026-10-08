@@ -29,6 +29,9 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
       # Cache entries are immutable, so each run saves under a new key and the next
       # run restores the most recent one via the prefix match.
       - name: Restore dedupe state
