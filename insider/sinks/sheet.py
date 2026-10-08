@@ -6,7 +6,7 @@ import requests
 from insider.util import redact
 
 USER_AGENT = "InsiderJobPipeline/1.0 (+https://github.com/zshqv/Insider)"
-EXPECTED_SCRIPT_VERSION = 3
+EXPECTED_SCRIPT_VERSION = 4
 BATCH_SIZE = 25
 
 HINT_HTML = (
