@@ -34,12 +34,16 @@ def build_role_filter(target_roles):
         rf"\b({max_yoe + 1}|[{max_yoe + 1}-9]|\d{{2,}})\+?\s*(years?|yrs?|yoe)\b", re.IGNORECASE
     )
 
+    finance_override_re = re.compile(
+        r"\b(?:data|automation|analyst|analytics|operations|finance|business)\b", re.IGNORECASE
+    )
+
     def passes(title, description=""):
         t = title.lower()
         text = f"{title} {description}".lower()
         if block_re.search(t):
             return False
-        if noise_re.search(t):
+        if noise_re.search(t) and not finance_override_re.search(t):
             return False
         if high_yoe_re.search(text):
             return False
