@@ -181,6 +181,7 @@ def detect_visa(title, description):
 def detect_location_gate(job):
     """Returns (gate, reason). Reuses existing tier classification."""
     cand = _candidate()
+    cfg = _load()
     tier = job.get("tier")
     accepts = [c.lower() for c in cand.get("accepts_onsite_in", [])]
     loc = job.get("location", "").lower()
@@ -199,6 +200,12 @@ def detect_location_gate(job):
 
     if based_in and based_in in loc:
         return "Pass", ""
+
+    if based_in:
+        local_places = cfg.get("tier1_locations", []) + cfg.get("india_locations", [])
+        for place in local_places:
+            if place.lower() in loc:
+                return "Pass", ""
 
     desc = job.get("description", "")
     if _VISA_SPONSOR_YES_RE.search(desc):

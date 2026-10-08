@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import json
@@ -6,6 +7,7 @@ import requests
 from dotenv import load_dotenv
 from insider.sources import fetch_all
 from insider.filters import build_role_filter, classify_tier
+from insider.gates import apply_gates, compute_fit
 from insider.sinks.sheet import SheetClient, SheetError
 from insider.dedupe import SeenStore
 from insider.util import env, redact
@@ -37,7 +39,19 @@ def send_to_discord(job, webhook_url):
     ppo = job.get("badge", "")
     if ppo:
         tier_badge += f"\n🎓 {ppo}"
-    date_posted = job.get("date_posted", "Recently")
+    date_posted = job.get("date_posted") or "Recently"
+
+    fit = job.get("fit", "?")
+    gate_pass = job.get("gate_pass", "?")
+    gate_reasons = job.get("gate_fail_reasons", "")
+    german_req = job.get("german_required")
+    german_label = f"{german_req}" if german_req else "None"
+
+    gate_line = f"**Fit:** `{fit}` · **Gate:** `{gate_pass}`"
+    if german_req:
+        gate_line += f" · **German:** `{german_label}`"
+    if gate_reasons:
+        gate_line += f"\n⚠️ `{gate_reasons}`"
 
     embed = {
         "title": f"💼 {job['title']}",
@@ -45,7 +59,8 @@ def send_to_discord(job, webhook_url):
             f"{tier_badge}\n\n"
             f"**Company:** `{job.get('company', 'N/A')}`\n"
             f"**Location:** `{job.get('location', 'N/A')}`\n"
-            f"**Date Posted:** `{date_posted}`"
+            f"**Date Posted:** `{date_posted}`\n"
+            f"{gate_line}"
         ),
         "color": color,
         "fields": [
@@ -77,7 +92,7 @@ def send_to_discord(job, webhook_url):
 
 def to_sheet_lead(job):
     return {
-        "date_posted": job.get("date_posted"),
+        "date_posted": job.get("date_posted") or "",
         "title": job.get("title"),
         "company": job.get("company"),
         "location": job.get("location"),
@@ -85,6 +100,13 @@ def to_sheet_lead(job):
         "url": job.get("url"),
         "workplace": job.get("workplace_type"),
         "tier": _TIER_LABELS.get(job.get("tier"), "Tier 2 🌐"),
+        "fit": job.get("fit", ""),
+        "gate_pass": job.get("gate_pass", ""),
+        "german_required": job.get("german_required") or "",
+        "enrollment_required": job.get("enrollment_required", ""),
+        "visa_sponsorship": job.get("visa_sponsorship", ""),
+        "gate_fail_reasons": job.get("gate_fail_reasons", ""),
+        "date_found": job.get("date_found", ""),
     }
 
 def send_to_google_sheet(jobs, webhook_url):
@@ -127,17 +149,21 @@ def run_pipeline(dry_run=False):
 
     for j in jobs:
         classify_tier(j)
+        apply_gates(j)
+        compute_fit(j, config.get("target_roles", []))
 
     by_tier = {}
     for j in jobs:
         by_tier.setdefault(j.get("tier"), []).append(j)
 
     postable = [j for j in jobs if not seen.is_seen(j)]
+    _FIT_ORDER = {"A": 0, "B": 1, "C": 2}
     def _sort_key(j):
+        fit = _FIT_ORDER.get(j.get("fit", "C"), 2)
         tier = j.get("tier", 9)
-        date = j.get("date_posted", "0000-00-00")
+        date = j.get("date_posted") or j.get("date_found") or "0000-00-00"
         date_inv = "".join(chr(ord("9") - ord(c)) if c.isdigit() else c for c in date)
-        return (tier, date_inv)
+        return (fit, tier, date_inv)
     postable.sort(key=_sort_key)
     tier_summary = ", ".join(
         f"{_TIER_LABELS.get(t, f'Tier {t}')}: {len(js)}"
@@ -151,12 +177,21 @@ def run_pipeline(dry_run=False):
     if len(postable) > len(processed):
         print(f"[*] Capped at {len(processed)} this run; the other {len(postable) - len(processed)} go out next run.")
 
+    import yaml as _yaml
+    with open(os.path.join(os.path.dirname(__file__), "config", "filters.yaml"), "r", encoding="utf-8") as _f:
+        _fit_cfg = _yaml.safe_load(_f).get("fit", {})
+    post_fit_c = _fit_cfg.get("post_fit_c", False)
+
     if dry_run:
         for j in processed:
             badge = j.get("badge", "")
             tier_label = _TIER_LABELS.get(j.get("tier"), "?")
-            print(f"    [dry-run] [{tier_label}] {j.get('title')} | {j.get('company')} "
-                  f"| {j.get('location')} {badge}")
+            fit = j.get("fit", "?")
+            gate = j.get("gate_pass", "?")
+            reasons = j.get("gate_fail_reasons", "")
+            extra = f" [{reasons}]" if reasons else ""
+            print(f"    [dry-run] [Fit {fit}|Gate {gate}] [{tier_label}] {j.get('title')} | {j.get('company')} "
+                  f"| {j.get('location')} {badge}{extra}")
         print("[✔] Dry run: nothing posted, seen list not updated.")
         return
 
@@ -165,6 +200,9 @@ def run_pipeline(dry_run=False):
         print("[!] DISCORD_WEBHOOK_URL not set; nothing posted and seen list not updated.")
     else:
         for j in processed:
+            if j.get("fit") == "C" and not post_fit_c:
+                seen.mark(j)
+                continue
             if send_to_discord(j, webhook):
                 seen.mark(j)
                 seen.save()
