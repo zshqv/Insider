@@ -245,3 +245,22 @@ conversion_signals:
   - full-time offer
   - full time offer
   - return offer
+
+# --- Candidate profile ---
+# Set these to YOUR situation; the gate logic reads them so anyone who forks
+# can customise without touching code.
+candidate:
+  german_level: A1            # A1-C2 or "none"
+  enrolled_student: false
+  needs_visa_sponsorship: true
+  based_in: India
+  accepts_onsite_in:
+    - India
+  german_posting_assumes_german_required: true
+
+# --- Fit grade rules ---
+# A = gate_pass Pass + title matches target roles
+# B = exactly one gate Fail + title matches, or gate_pass Unknown
+# C = everything else
+fit:
+  post_fit_c: false           # if false, Fit C leads skip Discord (still go to Sheet)
