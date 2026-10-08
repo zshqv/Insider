@@ -36,7 +36,64 @@ seniority_block:
   - controller
   - treasurer
 
-# Non-finance noise titles to reject.
+# --- Engineering / noise block ---
+# Stem-based: "engineer" blocks engineer, engineers, engineering.
+# These are matched as TOKEN PREFIXES after title normalization.
+# A match is overridden ONLY if the title also contains a phrase from allow_phrases.
+engineering_block:
+  - engineer
+  - developer
+  - devops
+  - sre
+  - software
+  - backend
+  - frontend
+  - fullstack
+  - full stack
+  - front-end
+  - back-end
+  - firmware
+  - embedded
+  - hardware
+  - robotics
+  - mechanical
+  - electrical
+  - mechatronic
+  - deployment
+  - airworthiness
+  - aviation engineer
+  - machine learning engineer
+  - ml engineer
+  - mlops
+  - data engineer
+  - platform
+  - infrastructure
+  - cloud engineer
+  - qa engineer
+  - test engineer
+  - security engineer
+  - football
+  - sports agent
+
+# Phrases that override the engineering block.  The WHOLE PHRASE must appear in the
+# normalized title.  Single words like "data" or "analyst" do NOT override.
+allow_phrases:
+  - data analyst
+  - business analyst
+  - financial analyst
+  - finance analyst
+  - research analyst
+  - credit analyst
+  - operations analyst
+  - business operations
+  - automation specialist
+  - automation associate
+  - analytics associate
+  - bi analyst
+  - reporting analyst
+  - aviation finance
+
+# Non-engineering noise titles to reject (matched as word-boundary phrases).
 noise_block:
   - customer support
   - customer service
@@ -45,7 +102,6 @@ noise_block:
   - sales manager
   - sales associate
   - sales executive
-  - sales engineer
   - account executive
   - account manager
   - business development representative
@@ -57,49 +113,6 @@ noise_block:
   - technical support
   - collections
   - tele
-  # Engineering / tech
-  - software engineer
-  - software developer
-  - frontend
-  - front-end
-  - backend
-  - back-end
-  - full stack
-  - fullstack
-  - devops
-  - sre
-  - site reliability
-  - data engineer
-  - data scientist
-  - machine learning
-  - ml engineer
-  - ai engineer
-  - cloud engineer
-  - infrastructure engineer
-  - platform engineer
-  - security engineer
-  - qa engineer
-  - test engineer
-  - embedded engineer
-  - firmware
-  - ios developer
-  - android developer
-  - mobile developer
-  - web developer
-  - hardware engineer
-  - robotics
-  - electronics engineer
-  - computational
-  - deployment engineer
-  - systems administrator
-  - integration reliability
-  - engineering intern
-  - electronics engineering
-  - mechanical engineer
-  - electrical engineer
-  - civil engineer
-  - chemical engineer
-  - technician
   # Design / creative
   - graphic designer
   - ui designer
@@ -126,27 +139,19 @@ noise_block:
   - legal counsel
   - paralegal
   # Non-finance roles that match generic keywords
-  - customer success
   - community operations
   - community manager
   - event coordinator
   - event manager
   - office management
   - office manager
-  - werkstudent
-  - working student
   - pre-sales
   - product support
   - product manager
   - project engineer
-  - aviation
-  - airworthiness
-  - football agent
-  - sports agent
   - people analytics
   - customer experience
   - sales operations
-  - software engineering
 
 # Max years of experience allowed in title+description (inclusive).
 max_yoe: 2
@@ -255,6 +260,7 @@ candidate:
   enrolled_student: false
   needs_visa_sponsorship: true
   based_in: India
+  degree_background: commerce/finance/accounting
   accepts_onsite_in:
     - India
   german_posting_assumes_german_required: true
