@@ -45,8 +45,19 @@ def detect_workplace(title, location, description=""):
     return "On-site 🏢"
 
 
-def job(*, title, company, location, url, source, job_id, source_type, workplace, is_priority, date_posted, description="", date_found=None):
-    """Build a normalised job dict."""
+def job(*, title, company, location, url, source, job_id, source_type, workplace, is_priority, date_posted, description="", date_found=None, desc_quality=None):
+    """Build a normalised job dict.
+
+    desc_quality: "full" (complete posting), "snippet" (truncated/summary),
+                  or None to auto-detect from length.
+    """
+    if desc_quality is None:
+        if not description:
+            desc_quality = "title_only"
+        elif len(description) < 300:
+            desc_quality = "snippet"
+        else:
+            desc_quality = "full"
     return {
         "title": title,
         "company": company,
@@ -59,5 +70,6 @@ def job(*, title, company, location, url, source, job_id, source_type, workplace
         "is_priority": is_priority,
         "date_posted": date_posted,
         "description": description,
+        "desc_quality": desc_quality,
         "date_found": date_found or datetime.now().strftime("%Y-%m-%d"),
     }

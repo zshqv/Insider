@@ -1,19 +1,18 @@
 """One-time, idempotent, non-destructive sheet migration.
 
 Usage:
-    python scripts/migrate_sheet.py --dry-run   # preview changes
-    python scripts/migrate_sheet.py             # apply changes
+    python scripts/migrate_sheet.py --dry-run       # preview changes
+    python scripts/migrate_sheet.py --i-backed-up   # apply changes
 
 What it does:
   1. Calls ensureSchema() via the Apps Script web app (GET request).
-  2. Sets blank Status cells to "New".
+  2. Sets blank Status cells to "New" (via the default in Code.gs).
   3. Does NOT convert existing Rejected rows to Skipped.
 
-Before writing, it backs up the sheet contents to a local CSV.
+You must manually back up the sheet first (File -> Download -> CSV).
 """
 
 import argparse
-import csv
 import json
 import os
 import sys
@@ -23,26 +22,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from dotenv import load_dotenv
 from insider.util import env, redact
 from insider.sinks.sheet import SheetClient, SheetError
-
-BACKUP_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-
-
-def backup_sheet(client, path):
-    """Fetch sheet metadata (no bulk-read API from Apps Script, so we just log what we can)."""
-    print(f"[*] Requesting sheet info for backup reference...")
-    info = client.health()
-    headers = info.get("headers", [])
-    rows = info.get("data_rows", 0)
-    print(f"[*] Sheet: {info.get('spreadsheet')} / {info.get('sheet')}")
-    print(f"[*] Headers: {headers}")
-    print(f"[*] Data rows: {rows}")
-
-    os.makedirs(BACKUP_DIR, exist_ok=True)
-    meta_path = os.path.join(BACKUP_DIR, "migration_backup_meta.json")
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(info, f, indent=2)
-    print(f"[*] Metadata saved to {meta_path}")
-    return info
 
 
 def migrate(dry_run=False):
@@ -54,28 +33,56 @@ def migrate(dry_run=False):
 
     client = SheetClient(webhook)
 
-    print("[*] Step 1: Backing up sheet metadata...")
-    info = backup_sheet(client, BACKUP_DIR)
-
-    print("[*] Step 2: Calling GET to trigger ensureSchema()...")
     if dry_run:
-        print("    [dry-run] Would call GET to ensure new columns exist.")
-        print("    [dry-run] Would set blank Status cells to 'New'.")
-        print("    [dry-run] Existing 'Rejected' rows will NOT be changed.")
-        print("[✔] Dry run complete. No changes made.")
+        print("[*] Dry run — no changes will be made.\n")
+        print("[*] Would call GET to trigger ensureSchema() — adds missing columns:")
+        print("    Fit, Gate Pass, German Req, Enrollment Req, Visa, Gate Fail Reasons,")
+        print("    Gate Confidence, Date Found, Date Applied, Follow-up Date, Skip Reason,")
+        print("    Contact, Messaged On, Replied?, Notes, Duplicate Flag")
+        print("[*] New leads will default to Status = 'New'.")
+        print("[*] Existing 'Rejected' rows will NOT be changed.")
+        print("\n[*] After migration, redeploy Code.gs:")
+        print("    1. Open Apps Script editor")
+        print("    2. Paste the latest apps_script/Code.gs")
+        print("    3. Deploy > Manage deployments > Edit > Version: New version > Deploy")
+        print("\n[✔] Dry run complete.")
         return
 
-    result = client.health()
-    print(f"[✔] Schema ensured. Version: {result.get('version')}, headers: {result.get('headers')}")
+    print("[*] Step 1: Calling GET to trigger ensureSchema()...")
+    try:
+        result = client.health()
+    except SheetError as e:
+        print(f"[!] Failed: {e}")
+        print("\n[!] If you see a version mismatch, paste the latest Code.gs first:")
+        print("    1. Open Apps Script editor")
+        print("    2. Replace Code.gs with apps_script/Code.gs from this repo")
+        print("    3. Deploy > Manage deployments > Edit > Version: New version > Deploy")
+        print("    4. Re-run this script")
+        sys.exit(1)
 
-    print("[*] Note: Setting blank Status to 'New' must be done in Apps Script")
-    print("    or manually in the sheet (filter Status column for blanks, set to 'New').")
-    print("    The pipeline already sets Status='New' for new leads.")
-    print("[✔] Migration complete.")
+    print(f"[✔] Schema ensured. Script version: {result.get('version')}")
+    print(f"    Headers: {result.get('headers')}")
+    print(f"    Data rows: {result.get('data_rows')}")
+    print("\n[*] New leads will default to Status = 'New'.")
+    print("[*] Existing 'Rejected' rows were NOT changed.")
+    print("\n[*] Remember to redeploy Code.gs if you haven't already:")
+    print("    Deploy > Manage deployments > Edit > Version: New version > Deploy")
+    print("\n[✔] Migration complete.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Migrate Insider sheet to new schema")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying")
+    parser.add_argument("--i-backed-up", action="store_true",
+                        help="Confirm you backed up the sheet (File > Download > CSV). Required for non-dry-run.")
     args = parser.parse_args()
+
+    if not args.dry_run and not args.i_backed_up:
+        print("[!] Before migrating, back up your sheet:")
+        print("    1. Open the Google Sheet")
+        print("    2. File > Download > Comma Separated Values (.csv)")
+        print("    3. Save the file somewhere safe")
+        print("\n    Then re-run with: python scripts/migrate_sheet.py --i-backed-up")
+        sys.exit(1)
+
     migrate(dry_run=args.dry_run)

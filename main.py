@@ -106,8 +106,29 @@ def to_sheet_lead(job):
         "enrollment_required": job.get("enrollment_required", ""),
         "visa_sponsorship": job.get("visa_sponsorship", ""),
         "gate_fail_reasons": job.get("gate_fail_reasons", ""),
+        "gate_confidence": job.get("gate_confidence", ""),
         "date_found": job.get("date_found", ""),
     }
+
+def _check_script_version(webhook_url, discord_webhook):
+    """Warn if Apps Script version is outdated."""
+    from insider.sinks.sheet import EXPECTED_SCRIPT_VERSION
+    try:
+        client = SheetClient(webhook_url)
+        res = client._request("GET")
+        live = res.get("version")
+        if live is not None and live < EXPECTED_SCRIPT_VERSION:
+            msg = (f"[!] Apps Script is version {live}, expected {EXPECTED_SCRIPT_VERSION}. "
+                   f"Paste the latest Code.gs and redeploy: Deploy > Manage deployments > Edit > New version > Deploy.")
+            print(msg)
+            if discord_webhook:
+                try:
+                    requests.post(discord_webhook, json={"content": f"⚠️ {msg}"}, timeout=10)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
 
 def send_to_google_sheet(jobs, webhook_url):
     """Optional sink: never raises, so a Sheet problem can't fail the run."""
@@ -209,6 +230,7 @@ def run_pipeline(dry_run=False):
         seen.save()
 
     if config["sheet_enabled"]:
+        _check_script_version(config["google_sheet_webhook"], config.get("discord_webhook_url"))
         send_to_google_sheet(processed, config["google_sheet_webhook"])
     else:
         print("[*] Google Sheet sink disabled (set SHEET_ENABLED=true to enable).")

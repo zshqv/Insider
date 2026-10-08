@@ -145,7 +145,7 @@ python main.py --once
 
 The sheet now includes gate and tracking columns. Run **Insider → Ensure Schema** from the sheet menu (or call the web app with a GET request) to add any missing columns.
 
-New pipeline columns: Fit, Gate Pass, German Req, Enrollment Req, Visa, Gate Fail Reasons, Date Found.
+New pipeline columns: Fit, Gate Pass, German Req, Enrollment Req, Visa, Gate Fail Reasons, Gate Confidence, Date Found.
 
 New tracking columns (you fill these): Date Applied, Follow-up Date, Skip Reason, Contact, Messaged On, Replied?, Notes, Duplicate Flag.
 
@@ -210,5 +210,5 @@ The pipeline will now run automatically on your schedule.
 | `0 new to post` | The dedupe caught them — they were posted in a previous run. Delete `data/seen.json` to reset |
 | Jobs from wrong fields showing up | Add those title keywords to `noise_block` in `config/filters.yaml` |
 | Too few results | Add more company slugs to `config/companies.yaml` or broaden `tier1_locations` / `india_locations` |
-| Sheet version mismatch | Paste the latest `apps_script/Code.gs` into the editor and deploy a **new version** |
+| Sheet version mismatch | Paste the latest `apps_script/Code.gs` into the editor and deploy a **new version**. The pipeline will also post a Discord warning when it detects a version mismatch. |
 | Gate results all Unknown | Make sure sources are returning descriptions — check the source API responses |

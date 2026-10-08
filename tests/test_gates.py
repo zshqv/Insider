@@ -255,3 +255,48 @@ class TestIntegration:
         compute_fit(j, ["analyst", "finance"])
         assert j["gate_pass"] == "Fail"
         assert j["fit"] == "C"  # multiple fails + no role match
+
+    def test_gate_confidence_full(self):
+        j = {
+            "title": "Analyst",
+            "description": "A" * 500,
+            "location": "Remote",
+            "tier": 0,
+            "desc_quality": "full",
+        }
+        apply_gates(j)
+        assert j["gate_confidence"] == "Full text"
+
+    def test_gate_confidence_snippet(self):
+        j = {
+            "title": "Analyst",
+            "description": "Short desc",
+            "location": "Remote",
+            "tier": 0,
+            "desc_quality": "snippet",
+        }
+        apply_gates(j)
+        assert j["gate_confidence"] == "Snippet only"
+
+    def test_gate_confidence_title_only(self):
+        j = {
+            "title": "Analyst",
+            "description": "",
+            "location": "Remote",
+            "tier": 0,
+        }
+        apply_gates(j)
+        assert j["gate_confidence"] == "Title only"
+
+    def test_unknown_gate_caps_fit_at_b(self):
+        """Even with role match, any Unknown gate keeps Fit at B."""
+        j = {
+            "title": "Junior Financial Analyst",
+            "description": "Great remote opportunity. We hire globally.",
+            "location": "Remote",
+            "tier": 0,
+        }
+        apply_gates(j)
+        compute_fit(j, ["analyst", "finance"])
+        assert j["visa_gate"] == "Unknown"
+        assert j["fit"] == "B"  # visa unknown caps at B

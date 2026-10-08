@@ -1,5 +1,29 @@
+import re
+from html import unescape
+from html.parser import HTMLParser
+
 import requests
 from insider.sources._common import load_companies, format_date, within_recency, detect_workplace, job
+
+
+class _StripHTML(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self._parts = []
+
+    def handle_data(self, data):
+        self._parts.append(data)
+
+    def get_text(self):
+        return " ".join(self._parts)
+
+
+def _strip_tags(html):
+    if not html or "<" not in html:
+        return html or ""
+    p = _StripHTML()
+    p.feed(unescape(html))
+    return p.get_text()
 
 
 def fetch(filter_fn):
@@ -16,7 +40,7 @@ def fetch(filter_fn):
                 loc = item.get("location", "Various")
                 date_posted = format_date(item.get("publishedAt"))
 
-                desc = item.get("descriptionPlain", "") or item.get("description", "")
+                desc = item.get("descriptionPlain", "") or _strip_tags(item.get("description", ""))
 
                 if not filter_fn(title, desc) or not within_recency(date_posted):
                     continue

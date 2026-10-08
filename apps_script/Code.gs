@@ -31,6 +31,7 @@ var COLUMNS = {
   enrollment_required: 'Enrollment Req',
   visa_sponsorship:  'Visa',
   gate_fail_reasons: 'Gate Fail Reasons',
+  gate_confidence:   'Gate Confidence',
   date_found:        'Date Found'
 };
 var STATUS_HEADER = 'Status';
@@ -147,7 +148,7 @@ function setupSheet() {
     'Date Posted': 110, 'Title': 350, 'Company': 180, 'Location': 200,
     'Source': 130, 'URL': 80, 'Workplace': 100, 'Tier': 100,
     'Fit': 50, 'Gate Pass': 80, 'German Req': 90, 'Enrollment Req': 100,
-    'Visa': 70, 'Gate Fail Reasons': 200, 'Date Found': 110,
+    'Visa': 70, 'Gate Fail Reasons': 200, 'Gate Confidence': 100, 'Date Found': 110,
     'Status': 100, 'Date Applied': 110, 'Follow-up Date': 110,
     'Skip Reason': 150, 'Contact': 180, 'Messaged On': 110,
     'Replied?': 80, 'Notes': 250, 'Duplicate Flag': 180

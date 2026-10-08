@@ -125,6 +125,7 @@ Internships with conversion/PPO signals get a badge.
 | Enrollment Req | Pipeline | Yes / No / Unknown |
 | Visa | Pipeline | Yes / No / Unknown |
 | Gate Fail Reasons | Pipeline | Short explanation of failures |
+| Gate Confidence | Pipeline | Full text / Snippet only / Title only |
 | Date Found | Pipeline | When the pipeline first saw this job |
 | Status | You | New / Skipped / Applied / Replied / Interview / Offer / Rejected / Ghosted |
 | Date Applied | Auto/You | Auto-filled when Status → Applied |

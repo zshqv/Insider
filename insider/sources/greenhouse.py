@@ -15,7 +15,7 @@ def fetch(filter_fn):
                 title = item.get("title", "")
                 loc = item.get("location", {}).get("name", "Various")
                 content = item.get("content", "")
-                date_posted = format_date(item.get("updated_at"))
+                date_posted = format_date(item.get("first_published") or item.get("updated_at"))
 
                 if not filter_fn(title, content) or not within_recency(date_posted):
                     continue

@@ -214,6 +214,9 @@ def detect_location_gate(job):
     return "Fail", "On-site outside accepted locations"
 
 
+_CONFIDENCE_LABELS = {"full": "Full text", "snippet": "Snippet only", "title_only": "Title only"}
+
+
 def apply_gates(job):
     """Run all gates on a job dict, mutating it with gate fields. Returns job."""
     title = job.get("title", "")
@@ -234,6 +237,8 @@ def apply_gates(job):
     else:
         gate_pass = "Unknown"
 
+    dq = job.get("desc_quality", "title_only" if not desc else ("snippet" if len(desc) < 300 else "full"))
+
     job["german_required"] = german_level
     job["german_hard"] = german_hard
     job["german_gate"] = german_gate
@@ -244,12 +249,16 @@ def apply_gates(job):
     job["location_gate"] = loc_gate
     job["gate_pass"] = gate_pass
     job["gate_fail_reasons"] = "; ".join(reasons)
+    job["gate_confidence"] = _CONFIDENCE_LABELS.get(dq, dq)
 
     return job
 
 
 def compute_fit(job, target_roles):
-    """Assign fit grade A/B/C based on gates and role match."""
+    """Assign fit grade A/B/C based on gates and role match.
+
+    Any Unknown gate caps Fit at B (never A).
+    """
     title = job.get("title", "").lower()
     role_match = any(r.lower() in title for r in target_roles)
     gate_pass = job.get("gate_pass", "Unknown")
@@ -257,10 +266,11 @@ def compute_fit(job, target_roles):
     gates = [job.get("german_gate"), job.get("enrollment_gate"),
              job.get("visa_gate"), job.get("location_gate")]
     fail_count = gates.count("Fail")
+    has_unknown = "Unknown" in gates
 
-    if gate_pass == "Pass" and role_match:
+    if gate_pass == "Pass" and role_match and not has_unknown:
         job["fit"] = "A"
-    elif (fail_count == 1 and role_match) or gate_pass == "Unknown":
+    elif (fail_count == 1 and role_match) or gate_pass == "Unknown" or has_unknown:
         job["fit"] = "B"
     else:
         job["fit"] = "C"

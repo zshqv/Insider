@@ -52,6 +52,7 @@ def fetch(filter_fn):
                         is_priority=False,
                         date_posted=date_posted,
                         description=desc,
+                        desc_quality="snippet",
                     ))
             except Exception as e:
                 print(f"[!] Adzuna {country}/{category} fetch failed: {e}")
